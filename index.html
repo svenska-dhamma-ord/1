@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diskussioner</title>
+  <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+  <main>
+    <h1>Diskussioner <small>(test, ingen riktig SDO-data)</small></h1>
+
+    <nav id="repo-val" aria-label="Repo">
+      <a href="#r/1" data-repo="1">1 (publikt)</a>
+      <a href="#r/1-privat" data-repo="1-privat">1-privat (privat)</a>
+    </nav>
+
+    <div id="inloggning">
+      <p id="inloggning-text" class="status"></p>
+      <button id="logga-in-knapp" type="button">Logga in med GitHub</button>
+    </div>
+
+    <p id="inloggad-rad" hidden>
+      Inloggad som <strong id="inloggad-som"></strong>
+      · roll i det här repot: <strong id="inloggad-roll">?</strong>
+      <button type="button" id="logga-ut-knapp">Logga ut</button>
+    </p>
+
+    <section id="vy-lista">
+      <form id="ny-diskussion-formular" hidden>
+        <label>
+          Kategori
+          <select id="ny-kategori" required></select>
+        </label>
+        <label>
+          Titel
+          <input type="text" id="ny-titel" required>
+        </label>
+        <label>
+          Text
+          <textarea id="ny-text" required></textarea>
+        </label>
+        <button type="submit">Skapa diskussion</button>
+        <p class="status" id="skapa-status"></p>
+      </form>
+
+      <p class="status" id="status">Hämtar diskussioner…</p>
+      <ul id="lista"></ul>
+    </section>
+
+    <section id="vy-detalj" hidden>
+      <button type="button" id="tillbaka-knapp">← Tillbaka</button>
+      <h2 id="detalj-titel"></h2>
+      <p class="meta" id="detalj-meta"></p>
+      <p class="pills" id="detalj-pills"></p>
+      <p id="detalj-text"></p>
+
+      <div class="atgarder" id="detalj-atgarder"></div>
+      <form id="redigera-formular" hidden>
+        <label>Titel <input type="text" id="redigera-titel" required></label>
+        <label>Text <textarea id="redigera-text" required></textarea></label>
+        <div class="atgarder">
+          <button type="submit">Spara</button>
+          <button type="button" id="redigera-avbryt">Avbryt</button>
+        </div>
+      </form>
+      <p class="status" id="atgard-status"></p>
+
+      <h3>Kommentarer</h3>
+      <ul id="detalj-kommentarer"></ul>
+
+      <form id="kommentar-formular" hidden>
+        <p id="svarar-pa" hidden>
+          Svarar på en kommentar
+          <button type="button" id="avbryt-svar-knapp">Avbryt</button>
+        </p>
+        <label>
+          Ny kommentar
+          <textarea id="kommentar-text" required></textarea>
+        </label>
+        <button type="submit">Skicka</button>
+      </form>
+      <p class="status" id="kommentar-status"></p>
+      <p id="logga-in-for-kommentar" class="status" hidden>Logga in för att kommentera.</p>
+
+      <p class="status" id="detalj-status"></p>
+
+      <details id="behorigheter-ruta">
+        <summary>Behörigheter enligt GitHub (för testet)</summary>
+        <pre id="behorigheter"></pre>
+      </details>
+    </section>
+  </main>
+  <script src="script.js?v=5"></script>
+</body>
+</html>
