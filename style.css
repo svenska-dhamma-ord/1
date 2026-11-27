@@ -225,3 +225,30 @@ li.markerad { background: #fff8c5; }
   .reaktioner button.aktiv { background: #1c3566; border-color: #2f6bff; }
   li.markerad { background: #3a3414; }
 }
+
+/* ärenden, historik, förhandsvisning, flikar */
+#typ-val { display: flex; gap: 0.5rem; margin: 0.5rem 0; }
+#typ-val a {
+  padding: 0.25rem 0.8rem;
+  border-bottom: 3px solid transparent;
+  text-decoration: none;
+  color: #0b5fff;
+  font-weight: 600;
+}
+#typ-val a.aktiv { border-bottom-color: #0b5fff; color: inherit; }
+button.liten { padding: 0 0.4rem; font-size: 0.8rem; }
+.pill button.liten { border: 0; background: transparent; color: inherit; }
+.forhandsvisning { border: 1px dashed #bbb; border-radius: 6px; padding: 0.4rem 0.7rem; margin: 0.3rem 0; }
+.historik { margin: 0.4rem 0; padding: 0; }
+.historik li { border: 0; padding: 0.3rem 0; }
+.historik pre { white-space: pre-wrap; max-height: 12rem; overflow: auto; background: #f6f6f6; padding: 0.4rem; margin: 0.2rem 0; font-size: 0.8rem; }
+label.rad { flex-direction: row; align-items: center; gap: 0.4rem; }
+button[aria-pressed="true"].aktiv { background: #dbe8ff; border-color: #0b5fff; }
+
+@media (prefers-color-scheme: dark) {
+  #typ-val a { color: #7aa7ff; }
+  #typ-val a.aktiv { border-bottom-color: #7aa7ff; }
+  .forhandsvisning { border-color: #3a404b; }
+  .historik pre { background: #1a1d24; }
+  button[aria-pressed="true"].aktiv { background: #1c3566; border-color: #2f6bff; }
+}

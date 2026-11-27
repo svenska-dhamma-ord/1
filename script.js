@@ -126,8 +126,13 @@ async function uppdateraInloggning() {
 
 // Ingen automatisk hämtning. Inloggade uppdaterar själva med knappen Uppdatera;
 // den som inte är inloggad laddar om sidan om hen vill se nytt.
-function klockan() {
-  return new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+// Var fel och besked visas: i ärendevyn om den är öppen, annars i trådvyn.
+function statusYta() {
+  return $("vy-arende").hidden ? $("atgard-status") : $("arende-atgard-status");
+}
+
+function klockan(iso) {
+  return (iso ? new Date(iso) : new Date()).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
 
 function visaRoll(roll) {
@@ -240,7 +245,8 @@ const EMOJI = {
 // Räknare kommer från GitHub (reactionGroups). Inloggade med viewerCanReact kan lägga till
 // och ta bort sina egna; andra ser bara de som har någon reaktion.
 function byggReaktioner(mal, subjektId, grupper, egna, kan) {
-  mal.innerHTML = "";
+  for (const gammal of mal.querySelectorAll(".reaktion")) gammal.remove();
+  const frag = document.createDocumentFragment();
   const harReagerat = Object.fromEntries((egna ?? []).map((g) => [g.content, g.viewerHasReacted]));
   const antal = Object.fromEntries((grupper ?? []).map((g) => [g.content, g.reactors.totalCount]));
   for (const innehall of Object.keys(EMOJI)) {
@@ -249,7 +255,7 @@ function byggReaktioner(mal, subjektId, grupper, egna, kan) {
     const b = document.createElement("button");
     b.type = "button";
     b.disabled = !kan;
-    b.className = `${harReagerat[innehall] ? "aktiv" : ""} ${n === 0 ? "noll" : ""}`.trim();
+    b.className = `reaktion ${harReagerat[innehall] ? "aktiv" : ""} ${n === 0 ? "noll" : ""}`.trim();
     b.textContent = `${EMOJI[innehall]} ${n}`;
     b.setAttribute("aria-pressed", String(Boolean(harReagerat[innehall])));
     b.addEventListener("click", async () => {
@@ -270,11 +276,12 @@ function byggReaktioner(mal, subjektId, grupper, egna, kan) {
         );
       } catch (fel) {
         b.disabled = false;
-        sattStatus($("atgard-status"), `Kunde inte reagera: ${fel.message}`, true);
+        sattStatus(statusYta(), `Kunde inte reagera: ${fel.message}`, true);
       }
     });
-    mal.append(b);
+    frag.append(b);
   }
+  mal.prepend(frag);
 }
 
 // ------------------------------------------------------------ hjälptext och länkar
@@ -307,6 +314,193 @@ async function kopieraLank(text, statusEl) {
     sattStatus(statusEl, "Länken är kopierad.");
   } catch {
     sattStatus(statusEl, `Kopiera länken: ${text}`);
+  }
+}
+
+// ------------------------------------------------------------ gemensamma delar (diskussioner och ärenden)
+
+// Förhandsgranska: GitHub renderar texten (samma som i tråden) via Workern.
+function medForhandsvisning(textarea) {
+  if (!textarea || textarea.dataset.forhand) return;
+  textarea.dataset.forhand = "1";
+  const ruta = document.createElement("div");
+  ruta.className = "markdown forhandsvisning";
+  ruta.hidden = true;
+  const kn = knapp("Förhandsgranska", async () => {
+    if (!ruta.hidden) {
+      ruta.hidden = true;
+      kn.textContent = "Förhandsgranska";
+      return;
+    }
+    const text = textarea.value.trim();
+    if (!text) {
+      ruta.textContent = "(ingen text än)";
+      ruta.hidden = false;
+      return;
+    }
+    kn.disabled = true;
+    try {
+      const data = await api("/markdown", { method: "POST", inloggad: true, body: { text } });
+      sattMarkdown(ruta, data.html, text);
+    } catch (fel) {
+      ruta.textContent = `Kunde inte förhandsgranska: ${fel.message}`;
+    } finally {
+      kn.disabled = false;
+      ruta.hidden = false;
+      kn.textContent = "Dölj förhandsvisning";
+    }
+  });
+  textarea.after(kn, ruta);
+}
+
+function upprostaKnapp(id, antal, harUpprostat, kan) {
+  if (!kan && !antal) return null;
+  let n = antal ?? 0;
+  let har = Boolean(harUpprostat);
+  const ritaOm = () => {
+    b.textContent = `▲ ${n}`;
+    b.className = har ? "aktiv" : "";
+    b.setAttribute("aria-pressed", String(har));
+  };
+  const b = knapp("", async () => {
+    b.disabled = true;
+    try {
+      const data = await api("/upvote", { method: "POST", inloggad: true, body: { id, on: !har } });
+      const s2 = (data.data.addUpvote ?? data.data.removeUpvote).subject;
+      n = s2.upvoteCount;
+      har = s2.viewerHasUpvoted;
+      ritaOm();
+    } catch (fel) {
+      sattStatus(statusYta(), `Kunde inte rösta: ${fel.message}`, true);
+    } finally {
+      b.disabled = !kan;
+    }
+  });
+  b.disabled = !kan;
+  b.title = "Upprösta";
+  ritaOm();
+  return b;
+}
+
+// "redigerad 27 nov av X" med en knapp som visar historiken (GitHubs `userContentEdits`).
+function redigeratMarke(objekt, id) {
+  if (!objekt.lastEditedAt) return null;
+  const rad = document.createElement("span");
+  rad.className = "meta";
+  rad.append(`redigerad ${datum(objekt.lastEditedAt)}${objekt.editor ? " av " + objekt.editor.login : ""} `);
+  const lista = document.createElement("ul");
+  lista.className = "historik";
+  lista.hidden = true;
+  const kn = knapp("Historik", async () => {
+    if (!lista.hidden) {
+      lista.hidden = true;
+      return;
+    }
+    kn.disabled = true;
+    try {
+      const data = await api(`/history?id=${encodeURIComponent(id)}`);
+      lista.innerHTML = "";
+      for (const e of data.data.edits) {
+        const li = document.createElement("li");
+        const rubrik = document.createElement("span");
+        rubrik.className = "meta";
+        rubrik.textContent = `${datum(e.editedAt)} ${klockan(e.editedAt)} · ${e.editor?.login ?? "okänd"}`;
+        const pre = document.createElement("pre");
+        pre.textContent = e.diff ?? "";
+        li.append(rubrik, pre);
+        lista.append(li);
+      }
+      if (!data.data.edits.length) lista.textContent = "Ingen historik.";
+      lista.hidden = false;
+    } catch (fel) {
+      lista.textContent = `Kunde inte hämta historiken: ${fel.message}`;
+      lista.hidden = false;
+    } finally {
+      kn.disabled = false;
+    }
+  });
+  kn.className = "liten";
+  rad.append(kn);
+  const hela = document.createElement("div");
+  hela.append(rad, lista);
+  return hela;
+}
+
+const DOLJ_ORSAKER = [
+  ["OFF_TOPIC", "off-topic"], ["SPAM", "skräp"], ["ABUSE", "kränkande"], ["OUTDATED", "föråldrad"],
+  ["DUPLICATE", "dubblett"], ["RESOLVED", "löst"], ["LOW_QUALITY", "låg kvalitet"],
+];
+
+// Dolda kommentarer visas hopfällda. Modererare (viewerCanMinimize) kan dölja och visa.
+function doljKomponenter(k, textEl, rad, efter) {
+  if (k.isMinimized) {
+    const notis = document.createElement("div");
+    notis.className = "status";
+    notis.textContent = `Dold kommentar (${k.minimizedReason ?? "dold"}). `;
+    const visa = knapp("Visa ändå", () => {
+      textEl.hidden = !textEl.hidden;
+      visa.textContent = textEl.hidden ? "Visa ändå" : "Dölj igen";
+    });
+    visa.className = "liten";
+    notis.append(visa);
+    textEl.hidden = true;
+    textEl.before(notis);
+    if (k.viewerCanUnminimize) {
+      rad.append(knapp("Visa för alla", () => anropa("/minimize", "POST", { id: k.id, on: false }, efter)));
+    }
+  } else if (k.viewerCanMinimize) {
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Orsak till att dölja");
+    for (const [v, t] of DOLJ_ORSAKER) sel.append(new Option(t, v));
+    rad.append(sel, knapp("Dölj", () => anropa("/minimize", "POST", { id: k.id, on: true, classifier: sel.value }, efter)));
+  }
+}
+
+// Anropar Workern, visar fel i åtgärdsraden och kör sedan `efter`.
+async function anropa(sokvag, metod, body, efter) {
+  const status = statusYta();
+  sattStatus(status, "Arbetar…");
+  try {
+    await api(sokvag, { method: metod, body, inloggad: true });
+    sattStatus(status, "");
+    await efter();
+  } catch (fel) {
+    sattStatus(status, `Misslyckades: ${fel.message}`, true);
+  }
+}
+
+// Labels: visas som märken, med × och en väljare för dem som får märka (viewerCanLabel).
+// Att sätta ”beslut” kräver Write i Workern, precis som knappen Märk som beslut.
+function byggLabels(mal, objektId, labels, kanMarka, efter) {
+  mal.innerHTML = "";
+  for (const l of labels) {
+    const m = document.createElement("span");
+    m.className = "pill";
+    m.append(l.name);
+    if (kanMarka) {
+      const x = knapp("×", () => anropa("/labels", "POST", { id: objektId, remove: [l.name] }, efter));
+      x.className = "liten";
+      x.setAttribute("aria-label", `Ta bort ${l.name}`);
+      m.append(x);
+    }
+    mal.append(m);
+  }
+  if (kanMarka) {
+    const plus = knapp("＋ Label", async () => {
+      plus.disabled = true;
+      try {
+        const data = await api("/labels");
+        const finns = new Set(labels.map((l) => l.name));
+        const sel = document.createElement("select");
+        sel.setAttribute("aria-label", "Label att lägga till");
+        for (const l of data.data.repository.labels.nodes) if (!finns.has(l.name)) sel.append(new Option(l.name, l.name));
+        plus.replaceWith(sel, knapp("Lägg till", () => anropa("/labels", "POST", { id: objektId, add: [sel.value] }, efter)));
+      } catch (fel) {
+        plus.disabled = false;
+        sattStatus(statusYta(), `Kunde inte hämta labels: ${fel.message}`, true);
+      }
+    });
+    mal.append(plus);
   }
 }
 
@@ -467,11 +661,14 @@ async function visaDetalj(nummer, kommentarId = null) {
   avbrytSvar();
   $("redigera-formular").hidden = true;
   $("vy-lista").hidden = true;
+  $("vy-arenden").hidden = true;
+  $("vy-arende").hidden = true;
   $("vy-detalj").hidden = false;
+  markeraTyp("d");
 
   const status = $("detalj-status");
   sattStatus(status, "Hämtar…");
-  sattStatus($("atgard-status"), "");
+  sattStatus(statusYta(), "");
 
   if (REPON[repo].privat && !tokenRackerForRepo()) {
     sattStatus(status, "Logga in för att läsa det privata repot.");
@@ -493,6 +690,13 @@ async function visaDetalj(nummer, kommentarId = null) {
     pillsEl.replaceWith(Object.assign(pills(d), { id: "detalj-pills" }));
     sattMarkdown($("detalj-text"), d.bodyHTML, d.bodyText);
     byggReaktioner($("detalj-reaktioner"), d.id, d.reactionGroups, d.viewerHasReactions, Boolean(d.viewerCanReact));
+    const upp = upprostaKnapp(d.id, d.upvoteCount, d.viewerHasUpvoted, Boolean(d.viewerCanUpvote));
+    if (upp) $("detalj-reaktioner").append(upp);
+    const rm = $("detalj-redigerad");
+    rm.innerHTML = "";
+    const marke = redigeratMarke(d, d.id);
+    if (marke) rm.append(marke);
+    byggLabels($("detalj-labels"), d.id, d.labels?.nodes ?? [], Boolean(d.viewerCanLabel), () => visaDetalj(nummer));
     $("oppna-github").href = d.url;
     $("hjalptext").textContent = hjalptext(d, r.viewerPermission);
     $("hamtad-detalj").textContent = `Hämtad ${klockan()}`;
@@ -526,6 +730,24 @@ function byggAtgarder(d, roll) {
   const arBeslut = (d.labels?.nodes ?? []).some((l) => l.name === "beslut");
 
   if (d.viewerCanUpdate) rad.append(knapp("Redigera", startaRedigering));
+  if (d.viewerCanUpdate) {
+    const bk = knapp("Byt kategori", async () => {
+      bk.disabled = true;
+      try {
+        const data = await api("/categories");
+        const sel = document.createElement("select");
+        sel.setAttribute("aria-label", "Ny kategori");
+        for (const k of data.data.repository.discussionCategories.nodes) {
+          if (k.name !== d.category?.name) sel.append(new Option(k.name, k.id));
+        }
+        bk.replaceWith(sel, knapp("Flytta", () => anropa(`/discussions/${d.number}`, "PATCH", { categoryId: sel.value }, () => visaDetalj(d.number))));
+      } catch (fel) {
+        bk.disabled = false;
+        sattStatus(statusYta(), `Kunde inte hämta kategorier: ${fel.message}`, true);
+      }
+    });
+    rad.append(bk);
+  }
   if (d.viewerCanDelete) rad.append(bekraftaKnapp("Radera", raderaDiskussion));
   if (d.viewerCanClose && !d.closed) {
     const orsak = document.createElement("select");
@@ -618,6 +840,7 @@ function laggTillFlerSvar(li, sub, k) {
 }
 
 function kommentarRad(k, toppniva, foralderId) {
+  let kommentarEfter = null;
   const li = document.createElement("li");
   li.id = `c-${k.id}`;
   if (k.isAnswer) li.className = "svar-markerat";
@@ -652,13 +875,20 @@ function kommentarRad(k, toppniva, foralderId) {
   reaktioner.className = "reaktioner";
   if (!k.deletedAt) {
     byggReaktioner(reaktioner, k.id, k.reactionGroups, k.viewerHasReactions, Boolean(k.viewerCanReact));
+    const upp = upprostaKnapp(k.id, k.upvoteCount, k.viewerHasUpvoted, Boolean(k.viewerCanUpvote));
+    if (upp) reaktioner.append(upp);
+    kommentarEfter = () => visaDetalj(aktuelltNummer);
     rad.append(knapp("Länk", () => kopieraLank(trådLank(aktuelltNummer, k.id), $("detalj-status"))));
   }
-  li.append(meta, text, reaktioner, rad);
+  const marke = k.deletedAt ? null : redigeratMarke(k, k.id);
+  li.append(meta);
+  if (marke) li.append(marke);
+  li.append(text, reaktioner, rad);
+  if (!k.deletedAt) doljKomponenter(k, text, rad, kommentarEfter);
   return li;
 }
 
-function visaBehorigheter(d, roll) {
+function visaBehorigheter(d, roll, mal = $("behorigheter")) {
   // Flaggor (sant eller falskt) per objekt. Reaktionslistan visas kort som "vilka du själv lagt".
   const flaggorFran = (objekt) => {
     const f = {};
@@ -678,7 +908,7 @@ function visaBehorigheter(d, roll) {
     samla(k);
     for (const s of k.replies?.nodes ?? []) samla(s);
   }
-  $("behorigheter").textContent = JSON.stringify(
+  mal.textContent = JSON.stringify(
     { viewerPermission: roll ?? "(ej inloggad)", discussion: flaggorFran(d), kommentarer },
     null,
     2
@@ -687,7 +917,7 @@ function visaBehorigheter(d, roll) {
 
 // ------------------------------------------------------------ åtgärder
 
-async function kor(fn, statusEl = $("atgard-status")) {
+async function kor(fn, statusEl = statusYta()) {
   sattStatus(statusEl, "Arbetar…");
   try {
     await fn();
@@ -714,7 +944,7 @@ function stangTrad(orsak) {
 }
 
 async function raderaDiskussion() {
-  const status = $("atgard-status");
+  const status = statusYta();
   sattStatus(status, "Arbetar…");
   try {
     await api(`/discussions/${aktuelltNummer}`, { method: "DELETE" });
@@ -756,6 +986,7 @@ function redigeraKommentar(li, k) {
   const ta = document.createElement("textarea");
   ta.value = k.body;
   ta.required = true;
+  setTimeout(() => medForhandsvisning(ta), 0);
   const spara = document.createElement("button");
   spara.type = "submit";
   spara.textContent = "Spara";
@@ -837,20 +1068,34 @@ async function skapaDiskussion(event) {
 
 function visaListVy() {
   $("vy-detalj").hidden = true;
+  $("vy-arenden").hidden = true;
+  $("vy-arende").hidden = true;
   $("vy-lista").hidden = false;
+  markeraTyp("d");
+}
+
+function markeraTyp(typ) {
+  for (const a of document.querySelectorAll("#typ-val a")) {
+    a.classList.toggle("aktiv", a.dataset.typ === typ);
+    a.href = a.dataset.typ === "i" ? `#r/${repo}/i` : `#r/${repo}`;
+  }
 }
 
 function lasRoute() {
   // #r/<repo>            lista
   // #r/<repo>/d/<n>      detalj
   // #d/<n>               (gammal form, standardrepot)
-  let m = location.hash.match(/^#r\/([\w-]+)(?:\/d\/(\d+)(?:\/c\/([\w-]+))?)?$/);
+  let m = location.hash.match(/^#r\/([\w-]+)\/i(?:\/(\d+)(?:\/c\/([\w-]+))?)?$/);
   if (m && REPON[m[1]]) {
-    return { repo: m[1], nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
+    return { repo: m[1], typ: "i", nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
+  }
+  m = location.hash.match(/^#r\/([\w-]+)(?:\/d\/(\d+)(?:\/c\/([\w-]+))?)?$/);
+  if (m && REPON[m[1]]) {
+    return { repo: m[1], typ: "d", nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
   }
   m = location.hash.match(/^#d\/(\d+)$/);
-  if (m) return { repo: STANDARD_REPO, nummer: Number(m[1]) };
-  return { repo: repo, nummer: null };
+  if (m) return { repo: STANDARD_REPO, typ: "d", nummer: Number(m[1]) };
+  return { repo: repo, typ: "d", nummer: null };
 }
 
 async function hanteraRoutning() {
@@ -867,7 +1112,10 @@ async function hanteraRoutning() {
     $("filter-kategori").length = 1;
   }
   await uppdateraInloggning();
-  if (route.nummer) {
+  if (route.typ === "i") {
+    if (route.nummer) visaArende(route.nummer, route.kommentar ?? null);
+    else visaArendeLista();
+  } else if (route.nummer) {
     visaDetalj(route.nummer, route.kommentar ?? null);
   } else {
     visaListVy();
@@ -928,6 +1176,8 @@ function init() {
   $("redigera-avbryt").addEventListener("click", () => {
     $("redigera-formular").hidden = true;
   });
+  for (const id of ["ny-text", "kommentar-text", "redigera-text"]) medForhandsvisning($(id));
+  initArenden();
   window.addEventListener("hashchange", hanteraRoutning);
 
   hanteraRoutning();

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Diskussioner</title>
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <main>
@@ -13,6 +13,11 @@
     <nav id="repo-val" aria-label="Repo">
       <a href="#r/1" data-repo="1">1 (publikt)</a>
       <a href="#r/1-privat" data-repo="1-privat">1-privat (privat)</a>
+    </nav>
+
+    <nav id="typ-val" aria-label="Typ">
+      <a href="#r/1" data-typ="d">Diskussioner</a>
+      <a href="#r/1/i" data-typ="i">Ärenden</a>
     </nav>
 
     <div id="inloggning">
@@ -96,7 +101,9 @@
       <p class="meta" id="detalj-meta"></p>
       <p class="pills" id="detalj-pills"></p>
       <div id="detalj-text" class="markdown"></div>
+      <div id="detalj-redigerad"></div>
       <div class="reaktioner" id="detalj-reaktioner"></div>
+      <div class="atgarder pills" id="detalj-labels"></div>
       <div class="atgarder">
         <a id="oppna-github" href="#" target="_blank" rel="noopener noreferrer">Öppna på GitHub</a>
         <button type="button" id="kopiera-lank">Kopiera länk</button>
@@ -139,7 +146,82 @@
         <pre id="behorigheter"></pre>
       </details>
     </section>
+
+    <section id="vy-arenden" hidden>
+      <p id="arenden-logga-in" class="status" hidden>Logga in för att se och skriva ärenden.</p>
+      <div id="arenden-innehall" hidden>
+        <form id="nytt-arende-formular">
+          <label>Titel <input type="text" id="arende-ny-titel" required></label>
+          <label>Text <textarea id="arende-ny-text" required></textarea></label>
+          <button type="submit">Skapa ärende</button>
+          <p class="status" id="arende-skapa-status"></p>
+        </form>
+        <div class="atgarder">
+          <label class="rad">Visa
+            <select id="arenden-status-val">
+              <option value="open">Öppna</option>
+              <option value="closed">Stängda</option>
+              <option value="all">Alla</option>
+            </select>
+          </label>
+          <label class="rad">Sortera
+            <select id="arenden-sort-val">
+              <option value="">Nyast först</option>
+              <option value="updated">Senast aktiv</option>
+            </select>
+          </label>
+          <button type="button" id="arenden-uppdatera">Uppdatera</button>
+          <span class="tid" id="arenden-hamtad"></span>
+        </div>
+        <p class="status" id="arenden-status"></p>
+        <ul id="arenden-lista"></ul>
+        <button type="button" id="arenden-fler" hidden>Visa fler ärenden</button>
+      </div>
+    </section>
+
+    <section id="vy-arende" hidden>
+      <div class="atgarder">
+        <button type="button" id="arende-tillbaka">← Tillbaka</button>
+        <button type="button" id="arende-uppdatera">Uppdatera</button>
+        <span class="tid" id="arende-hamtad"></span>
+      </div>
+      <h2 id="arende-titel"></h2>
+      <p class="meta" id="arende-meta"></p>
+      <p class="pills" id="arende-pills"></p>
+      <div id="arende-text" class="markdown"></div>
+      <div id="arende-redigerad"></div>
+      <div class="reaktioner" id="arende-reaktioner"></div>
+      <div class="atgarder pills" id="arende-labels"></div>
+      <div class="atgarder">
+        <a id="arende-github" href="#" target="_blank" rel="noopener noreferrer">Öppna på GitHub</a>
+        <button type="button" id="arende-kopiera">Kopiera länk</button>
+      </div>
+      <p class="status" id="arende-hjalptext"></p>
+      <div class="atgarder" id="arende-atgarder"></div>
+      <form id="arende-redigera-formular" hidden>
+        <label>Titel <input type="text" id="arende-redigera-titel" required></label>
+        <label>Text <textarea id="arende-redigera-text" required></textarea></label>
+        <div class="atgarder">
+          <button type="submit">Spara</button>
+          <button type="button" id="arende-redigera-avbryt">Avbryt</button>
+        </div>
+      </form>
+      <p class="status" id="arende-atgard-status"></p>
+      <h3>Kommentarer</h3>
+      <ul id="arende-kommentarer"></ul>
+      <button type="button" id="arende-kommentarer-fler" hidden>Visa fler kommentarer</button>
+      <form id="arende-kommentar-formular">
+        <label>Ny kommentar <textarea id="arende-kommentar-text" required></textarea></label>
+        <button type="submit">Skicka</button>
+      </form>
+      <p class="status" id="arende-status"></p>
+      <details>
+        <summary>Behörigheter enligt GitHub (för testet)</summary>
+        <pre id="arende-behorigheter"></pre>
+      </details>
+    </section>
   </main>
-  <script src="script.js?v=10"></script>
+  <script src="arenden.js?v=1"></script>
+  <script src="script.js?v=11"></script>
 </body>
 </html>
