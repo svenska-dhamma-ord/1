@@ -426,6 +426,13 @@ function redigeratMarke(objekt, id) {
   return hela;
 }
 
+// GitHub kräver OAuth-scopet repo (eller gist) för att dölja kommentarer, även i publika repon
+// (provat 27 november). Inloggningen mot det publika repot ger bara public_repo, så knapparna
+// visas först när man loggat in via det privata repot.
+function kanDolja() {
+  return hamtaScope().includes("repo");
+}
+
 const DOLJ_ORSAKER = [
   ["OFF_TOPIC", "off-topic"], ["SPAM", "skräp"], ["ABUSE", "kränkande"], ["OUTDATED", "föråldrad"],
   ["DUPLICATE", "dubblett"], ["RESOLVED", "löst"], ["LOW_QUALITY", "låg kvalitet"],
@@ -445,10 +452,10 @@ function doljKomponenter(k, textEl, rad, efter) {
     notis.append(visa);
     textEl.hidden = true;
     textEl.before(notis);
-    if (k.viewerCanUnminimize) {
+    if (k.viewerCanUnminimize && kanDolja()) {
       rad.append(knapp("Visa för alla", () => anropa("/minimize", "POST", { id: k.id, on: false }, efter)));
     }
-  } else if (k.viewerCanMinimize) {
+  } else if (k.viewerCanMinimize && kanDolja()) {
     const sel = document.createElement("select");
     sel.setAttribute("aria-label", "Orsak till att dölja");
     for (const [v, t] of DOLJ_ORSAKER) sel.append(new Option(t, v));
