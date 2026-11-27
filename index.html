@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Diskussioner</title>
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
   <main>
@@ -103,14 +103,17 @@
       <h2 id="detalj-titel"></h2>
       <p class="meta" id="detalj-meta"></p>
       <p class="pills" id="detalj-pills"></p>
+      <p class="status" id="detalj-banner" hidden></p>
       <div id="detalj-text" class="markdown"></div>
       <div id="detalj-redigerad"></div>
+      <div class="svarsruta" id="detalj-omrostning" hidden></div>
       <div class="reaktioner" id="detalj-reaktioner"></div>
       <div class="atgarder pills" id="detalj-labels"></div>
       <div class="atgarder">
         <a id="oppna-github" href="#" target="_blank" rel="noopener noreferrer">Öppna på GitHub</a>
         <button type="button" id="kopiera-lank">Kopiera länk</button>
         <button type="button" id="exportera-trad">Exportera tråd (Markdown)</button>
+        <button type="button" id="skapa-arende" hidden>Skapa ärende från tråden</button>
       </div>
       <p class="status" id="hjalptext"></p>
 
@@ -216,6 +219,7 @@
       <h2 id="arende-titel"></h2>
       <p class="meta" id="arende-meta"></p>
       <p class="pills" id="arende-pills"></p>
+      <p class="status" id="arende-banner" hidden></p>
       <div id="arende-text" class="markdown"></div>
       <div id="arende-redigerad"></div>
       <div class="reaktioner" id="arende-reaktioner"></div>
@@ -249,8 +253,8 @@
       </details>
     </section>
   </main>
-  <script src="arenden.js?v=2"></script>
-  <script src="extra.js?v=1"></script>
-  <script src="script.js?v=14"></script>
+  <script src="arenden.js?v=3"></script>
+  <script src="extra.js?v=2"></script>
+  <script src="script.js?v=15"></script>
 </body>
 </html>

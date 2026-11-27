@@ -278,3 +278,10 @@ ul.forslag li.vald { background: #dbe8ff; }
   .stapel { background: #2a2f38; }
   .stapel span { background: #7aa7ff; }
 }
+
+/* omröstning, banderoll */
+.valrad { display: grid; grid-template-columns: minmax(6rem, 12rem) 1fr 7rem; gap: 0.5rem; align-items: center; margin: 0.3rem 0; }
+.valrad button.aktiv { background: #dbe8ff; border-color: #0b5fff; }
+#detalj-banner, #arende-banner { font-weight: 600; }
+@media (max-width: 30rem) { .valrad { grid-template-columns: 1fr 5rem; } .valrad .stapel { grid-column: 1 / -1; order: 3; } }
+@media (prefers-color-scheme: dark) { .valrad button.aktiv { background: #1c3566; border-color: #2f6bff; } }

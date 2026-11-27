@@ -131,6 +131,16 @@ function statusYta() {
   return $("vy-arende").hidden ? $("atgard-status") : $("arende-atgard-status");
 }
 
+// "nyss", "5 min sedan", "3 tim sedan", "2 d sedan", annars datum. Hela tiden visas som tooltip.
+function relativ(iso) {
+  const sek = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (sek < 60) return "nyss";
+  if (sek < 3600) return `${Math.floor(sek / 60)} min sedan`;
+  if (sek < 86400) return `${Math.floor(sek / 3600)} tim sedan`;
+  if (sek < 7 * 86400) return `${Math.floor(sek / 86400)} d sedan`;
+  return datum(iso);
+}
+
 function klockan(iso) {
   return (iso ? new Date(iso) : new Date()).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
@@ -259,6 +269,9 @@ function byggReaktioner(mal, subjektId, grupper, egna, kan) {
     b.className = `reaktion ${harReagerat[innehall] ? "aktiv" : ""} ${n === 0 ? "noll" : ""}`.trim();
     b.textContent = `${EMOJI[innehall]} ${n}`;
     b.setAttribute("aria-pressed", String(Boolean(harReagerat[innehall])));
+    const grupp = (grupper ?? []).find((g) => g.content === innehall);
+    const namn = (grupp?.reactors?.nodes ?? []).map((u) => u.login).filter(Boolean);
+    if (n > 0) b.title = namn.join(", ") + (n > namn.length ? ` och ${n - namn.length} till` : "");
     b.addEventListener("click", async () => {
       b.disabled = true;
       try {
@@ -604,7 +617,8 @@ async function hamtaDiskussioner(fler = false) {
       lank.textContent = d.title;
       const meta = document.createElement("span");
       meta.className = "meta";
-      meta.textContent = `${d.author?.login ?? "okänd"} · ${datum(d.createdAt)} · ${d.category?.name ?? ""}`;
+      meta.textContent = `${d.author?.login ?? "okänd"} · ${datum(d.createdAt)} · ${d.category?.name ?? ""} · 💬 ${d.comments?.totalCount ?? 0}${d.upvoteCount ? ` · ▲ ${d.upvoteCount}` : ""} · senast ${relativ(d.updatedAt)}`;
+      meta.title = `Senast ändrad ${new Date(d.updatedAt).toLocaleString("sv-SE")}`;
       const markor = pills(d);
       if (fasta.has(d.number)) {
         const p = document.createElement("span");
@@ -714,6 +728,9 @@ async function visaDetalj(nummer, kommentarId = null) {
     markeraSedd("d", nummer);
     aterstallUtkast($("kommentar-text"));
     byggSvarsruta(d);
+    byggBanner($("detalj-banner"), d);
+    byggOmrostning(d);
+    $("skapa-arende").hidden = !tokenRackerForRepo();
     byggReaktioner($("detalj-reaktioner"), d.id, d.reactionGroups, d.viewerHasReactions, Boolean(d.viewerCanReact));
     for (const gammal of $("detalj-reaktioner").querySelectorAll(".upprost")) gammal.remove();
     const upp = upprostaKnapp(d.id, d.upvoteCount, d.viewerHasUpvoted, Boolean(d.viewerCanUpvote));

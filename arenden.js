@@ -49,7 +49,8 @@ async function hamtaArenden(fler = false) {
       lank.textContent = `#${a.number} ${a.title}`;
       const meta = document.createElement("span");
       meta.className = "meta";
-      meta.textContent = `${a.author?.login ?? "okänd"} · ${datum(a.createdAt)} · ${a.comments.totalCount} kommentarer`;
+      meta.textContent = `${a.author?.login ?? "okänd"} · ${datum(a.createdAt)} · 💬 ${a.comments.totalCount} · senast ${relativ(a.updatedAt)}`;
+      meta.title = `Senast ändrad ${new Date(a.updatedAt).toLocaleString("sv-SE")}`;
       const markor = pills({ ...a, labels: a.labels });
       if (arNytt("i", a)) markor.prepend(nyttMarke());
       li.append(lank, meta, markor);
@@ -111,6 +112,7 @@ async function visaArende(nummer, kommentarId = null) {
     $("arende-titel").textContent = `#${a.number} ${a.title}`;
     $("arende-meta").textContent = `${a.author?.login ?? "okänd"} · ${datum(a.createdAt)}`;
     $("arende-pills").replaceWith(Object.assign(pills(a), { id: "arende-pills" }));
+    byggBanner($("arende-banner"), a);
     sattMarkdown($("arende-text"), a.bodyHTML, a.bodyText);
     markeraSedd("i", nummer);
     aterstallUtkast($("arende-kommentar-text"));

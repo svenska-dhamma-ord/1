@@ -301,6 +301,7 @@ function initExtra() {
     ladda(`trad-${repo}-${aktuellDiskussion.number}.md`, traadSomMarkdown(aktuellDiskussion), "text/markdown");
   });
   $("oversikt-uppdatera").addEventListener("click", visaOversikt);
+  $("skapa-arende").addEventListener("click", skapaArendeFranTrad);
   $("kommentar-ordning").addEventListener("change", () => {
     lagraSkriv("sdo-ordning", $("kommentar-ordning").value);
     if (aktuellDiskussion) byggKommentarer(aktuellDiskussion);
@@ -323,4 +324,91 @@ function initExtra() {
       $("genvagar").hidden = true;
     }
   });
+}
+
+// ------------------------------------------------------------ banderoller
+
+function byggBanner(el, objekt) {
+  const delar = [];
+  if (objekt.locked) delar.push("🔒 Låst: bara de med Write kan kommentera.");
+  if (objekt.closed) {
+    const orsak = { RESOLVED: "löst", OUTDATED: "föråldrad", DUPLICATE: "dubblett", COMPLETED: "klart", NOT_PLANNED: "ej planerat" }[objekt.stateReason];
+    delar.push(`Stängd${orsak ? ` (${orsak})` : ""}.`);
+  }
+  el.textContent = delar.join(" ");
+  el.hidden = delar.length === 0;
+}
+
+// ------------------------------------------------------------ omröstningar
+
+// Omröstningar skapas på GitHub (kategorin Polls). Sidan visar resultatet och låter inloggade rösta.
+function byggOmrostning(d) {
+  const ruta = $("detalj-omrostning");
+  ruta.innerHTML = "";
+  ruta.hidden = !d.poll;
+  if (!d.poll) return;
+  ritaOmrostning(ruta, d.poll);
+}
+
+function ritaOmrostning(ruta, poll) {
+  ruta.innerHTML = "";
+  const fraga = document.createElement("strong");
+  fraga.textContent = `📊 ${poll.question}`;
+  ruta.append(fraga);
+  const kan = Boolean(poll.viewerCanVote);
+  for (const o of poll.options.nodes) {
+    const rad = document.createElement("div");
+    rad.className = "valrad";
+    const b = document.createElement("button");
+    b.type = "button";
+    b.disabled = !kan;
+    b.textContent = `${o.viewerHasVoted ? "✓ " : ""}${o.option}`;
+    b.className = o.viewerHasVoted ? "aktiv" : "";
+    b.setAttribute("aria-pressed", String(Boolean(o.viewerHasVoted)));
+    const stapel = document.createElement("span");
+    stapel.className = "stapel";
+    const fyll = document.createElement("span");
+    const andel = poll.totalVoteCount ? (o.totalVoteCount / poll.totalVoteCount) * 100 : 0;
+    fyll.style.width = `${andel}%`;
+    stapel.append(fyll);
+    const n = document.createElement("span");
+    n.textContent = `${o.totalVoteCount} (${Math.round(andel)} %)`;
+    rad.append(b, stapel, n);
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        const data = await api("/vote", { method: "POST", inloggad: true, body: { optionId: o.id } });
+        const p = data.data.addDiscussionPollVote.pollOption.poll;
+        ritaOmrostning(ruta, { question: poll.question, ...p });
+      } catch (fel) {
+        b.disabled = false;
+        sattStatus(statusYta(), `Kunde inte rösta: ${fel.message}`, true);
+      }
+    });
+    ruta.append(rad);
+  }
+  const sum = document.createElement("span");
+  sum.className = "meta";
+  sum.textContent = `${poll.totalVoteCount} röster${kan ? "" : poll.viewerCanVote === undefined ? ". Logga in för att rösta." : ". Du kan inte rösta här."}`;
+  ruta.append(sum);
+}
+
+// ------------------------------------------------------------ ärende från tråd
+
+async function skapaArendeFranTrad() {
+  const status = statusYta();
+  sattStatus(status, "Skapar ärende…");
+  try {
+    const data = await api(`/discussions/${aktuelltNummer}/issue`, { method: "POST", inloggad: true, body: {} });
+    const i = data.data.issue;
+    status.textContent = "";
+    const lank = document.createElement("a");
+    lank.href = `#r/${repo}/i/${i.number}`;
+    lank.textContent = `Ärende #${i.number} är skapat`;
+    status.classList.remove("error");
+    status.append(lank, data.data.lank ? " och en länk ligger i tråden." : ", men länken i tråden kunde inte läggas.");
+    if (data.data.lank) await visaDetalj(aktuelltNummer);
+  } catch (fel) {
+    sattStatus(status, `Kunde inte skapa ärendet: ${fel.message}`, true);
+  }
 }
