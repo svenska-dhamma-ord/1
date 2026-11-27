@@ -236,6 +236,7 @@ async function visaOversikt() {
   sattStatus(status, "Hämtar…");
   try {
     const data = (await api("/stats")).data;
+    if (data.roll) visaRoll(data.roll);
     sattStatus(status, "");
     const bar = (rubrik, rader) => {
       const sek = document.createElement("section");
