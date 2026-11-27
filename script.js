@@ -359,7 +359,7 @@ function upprostaKnapp(id, antal, harUpprostat, kan) {
   let har = Boolean(harUpprostat);
   const ritaOm = () => {
     b.textContent = `▲ ${n}`;
-    b.className = har ? "aktiv" : "";
+    b.className = har ? "upprost aktiv" : "upprost";
     b.setAttribute("aria-pressed", String(har));
   };
   const b = knapp("", async () => {
@@ -697,6 +697,7 @@ async function visaDetalj(nummer, kommentarId = null) {
     pillsEl.replaceWith(Object.assign(pills(d), { id: "detalj-pills" }));
     sattMarkdown($("detalj-text"), d.bodyHTML, d.bodyText);
     byggReaktioner($("detalj-reaktioner"), d.id, d.reactionGroups, d.viewerHasReactions, Boolean(d.viewerCanReact));
+    for (const gammal of $("detalj-reaktioner").querySelectorAll(".upprost")) gammal.remove();
     const upp = upprostaKnapp(d.id, d.upvoteCount, d.viewerHasUpvoted, Boolean(d.viewerCanUpvote));
     if (upp) $("detalj-reaktioner").append(upp);
     const rm = $("detalj-redigerad");
