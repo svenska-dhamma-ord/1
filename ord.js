@@ -66,6 +66,7 @@ async function visaOrdLista() {
     return;
   }
   sattStatus(status, "Hämtar…");
+  visaVantarPaMig();
   try {
     const data = await api("/words");
     sattStatus(status, data.ord.length ? `${data.ord.length} ord med trådar (${data.totalt} trådar, hämtad ${klockan()}).` : "Inga ord har trådar än. Skriv ett ord ovan för att börja.");
@@ -285,6 +286,13 @@ async function fyllTrad(inre, t) {
       }
       rad.append(anteckning, s3);
       inre.append(rad);
+      if (t.status === "granskad" || t.status === "beslutad" || t.beslut) {
+        const blankett = beslutsBlankett(t, d, "");
+        anteckning.addEventListener("input", () => {
+          blankett.querySelector("pre").textContent = beslutsText(t, d, anteckning.value);
+        });
+        inre.append(blankett);
+      }
       if (d.viewerDidAuthor) {
         const n = document.createElement("p");
         n.className = "status";
@@ -346,4 +354,82 @@ function initOrd() {
       sattStatus(status, `Kunde inte skapa tråden: ${fel.message}`, true);
     }
   });
+}
+
+// ------------------------------------------------------------ Väntar på mig (2.7)
+
+async function visaVantarPaMig() {
+  const ruta = $("ord-vantar");
+  const inn = $("ord-vantar-innehall");
+  inn.innerHTML = "";
+  ruta.hidden = !tokenRackerForRepo();
+  if (ruta.hidden) return;
+  try {
+    const d = await api("/waiting", { inloggad: true });
+    const grupp = (rubrik, lista, tom) => {
+      const h = document.createElement("h4");
+      h.textContent = `${rubrik} (${lista.length})`;
+      inn.append(h);
+      if (!lista.length) {
+        const p = document.createElement("p");
+        p.className = "status";
+        p.textContent = tom;
+        inn.append(p);
+        return;
+      }
+      const ul = document.createElement("ul");
+      for (const t of lista) {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = `#r/${repo}/w/${t.key}`;
+        a.textContent = `${t.key.replace(/^ord:|^kategori:/, "")}: ${t.rubrik}`;
+        const m = document.createElement("span");
+        m.className = "meta";
+        m.textContent = ` #${t.number} · ${t.author ?? "okänd"} · 💬 ${t.comments} · senast ${relativ(t.updatedAt)}`;
+        li.append(a, m);
+        if (t.status) li.append(" ", statusPill(t.status));
+        ul.append(li);
+      }
+      inn.append(ul);
+    };
+    grupp("Mina öppna trådar", d.mina, "Du har inga öppna trådar.");
+    if (WRITE_ELLER_HOGRE.includes(d.roll)) grupp("Förslag att granska", d.granska, "Inga förslag väntar på granskning.");
+    if (d.roll === "ADMIN" || d.roll === "MAINTAIN") grupp("Granskade, att besluta", d.besluta, "Inget väntar på beslut.");
+  } catch (fel) {
+    const p = document.createElement("p");
+    p.className = "status fel";
+    p.textContent = `Kunde inte hämta Väntar på mig: ${fel.message}`;
+    inn.append(p);
+  }
+}
+
+// ------------------------------------------------------------ beslutsblankett (2.11)
+// Förhandsvisning av den beslutsfil som skulle sparas. Sparas ingenstans: en människa för in filen.
+
+function beslutsText(t, d, anteckning) {
+  const idag = new Date().toLocaleDateString("sv-SE");
+  const nyckel = t.key.replace(/^ord:/, "");
+  return [
+    "---",
+    `fil: beslut/${idag}-${nyckel}.md`,
+    `datum: ${idag}`,
+    `beslutat_av: ${$("inloggad-som").textContent || "(ditt användarnamn)"}`,
+    `tråd: ${d.url}`,
+    "---",
+    `# Beslut: ${t.rubrik} (${nyckel})`,
+    "",
+    anteckning?.trim() || "(skriv en anteckning)",
+    "",
+    "Underlag: se tråden. Ändrar ingen data förrän en människa för in beslutet.",
+  ].join("\n");
+}
+
+function beslutsBlankett(t, d, anteckning) {
+  const det = document.createElement("details");
+  const sum = document.createElement("summary");
+  sum.textContent = "Beslutsblankett (förhandsvisning, sparas inte)";
+  const pre = document.createElement("pre");
+  pre.textContent = beslutsText(t, d, anteckning);
+  det.append(sum, pre);
+  return det;
 }
