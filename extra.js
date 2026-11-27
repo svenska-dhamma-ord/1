@@ -389,7 +389,7 @@ function ritaOmrostning(ruta, poll) {
   }
   const sum = document.createElement("span");
   sum.className = "meta";
-  sum.textContent = `${poll.totalVoteCount} röster${kan ? "" : poll.viewerCanVote === undefined ? ". Logga in för att rösta." : ". Du kan inte rösta här."}`;
+  sum.textContent = `${poll.totalVoteCount} ${poll.totalVoteCount === 1 ? "röst" : "röster"}${kan ? "" : poll.viewerCanVote === undefined ? ". Logga in för att rösta." : ". Du kan inte rösta här."}`;
   ruta.append(sum);
 }
 
