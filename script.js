@@ -1158,6 +1158,8 @@ function visaListVy() {
 function markeraTyp(typ) {
   for (const a of document.querySelectorAll("#typ-val a")) {
     a.classList.toggle("aktiv", a.dataset.typ === typ);
+    if (a.dataset.typ === typ) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
     a.href = a.dataset.typ === "i" ? `#r/${repo}/i` : a.dataset.typ === "o" ? `#r/${repo}/o` : a.dataset.typ === "w" ? `#r/${repo}/w` : `#r/${repo}`;
   }
 }
@@ -1197,6 +1199,8 @@ async function hanteraRoutning() {
   repo = route.repo;
   for (const a of document.querySelectorAll("#repo-val a")) {
     a.classList.toggle("aktiv", a.dataset.repo === repo);
+    if (a.dataset.repo === repo) a.setAttribute("aria-current", "true");
+    else a.removeAttribute("aria-current");
   }
   if (bytteRepo) {
     visaRoll(null);
@@ -1315,6 +1319,11 @@ function init() {
   initArenden();
   initOrd();
   initExtra();
+  // Hoppa-länken får inte ändra adressen (den styr vyn)
+  $("hoppa-lank").addEventListener("click", (e) => {
+    e.preventDefault();
+    $("huvud").focus();
+  });
   window.addEventListener("hashchange", hanteraRoutning);
 
   hanteraRoutning();

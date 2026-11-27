@@ -387,3 +387,11 @@ button.vik { margin-left: auto; }
 :root[data-tema="mork"] .pill.status-granskad { background: #1d4d2c; }
 :root[data-tema="mork"] .pill.status-beslutad { background: #3d5a1c; }
 :root[data-tema="mork"] .pill.status-avvisad { background: #5a2020; }
+
+/* Tillgänglighet: synlig fokusram och hoppa-länk */
+:focus-visible { outline: 3px solid #2f6fdd; outline-offset: 2px; }
+.hoppa { position: absolute; left: -999px; top: 0; background: #fff; color: #000; padding: 0.5rem 1rem; z-index: 10; }
+.hoppa:focus { left: 0.5rem; top: 0.5rem; }
+#typ-val a[aria-current="page"], #repo-val a[aria-current="true"] { text-decoration: underline; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="ljus"]) :focus-visible { outline-color: #8ab4ff; } }
+:root[data-tema="mork"] :focus-visible { outline-color: #8ab4ff; }
