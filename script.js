@@ -659,24 +659,27 @@ function kommentarRad(k, toppniva, foralderId) {
 }
 
 function visaBehorigheter(d, roll) {
-  const flaggor = {};
-  for (const [nyckel, varde] of Object.entries(d)) {
-    if (nyckel.startsWith("viewer")) flaggor[nyckel] = varde;
-  }
-  const kommentarer = [];
-  const samla = (k) => {
-    const f = { forfattare: k.author?.login ?? null };
-    for (const [nyckel, varde] of Object.entries(k)) {
-      if (nyckel.startsWith("viewer")) f[nyckel] = varde;
+  // Flaggor (sant eller falskt) per objekt. Reaktionslistan visas kort som "vilka du själv lagt".
+  const flaggorFran = (objekt) => {
+    const f = {};
+    for (const [nyckel, varde] of Object.entries(objekt)) {
+      if (!nyckel.startsWith("viewer")) continue;
+      if (nyckel === "viewerHasReactions") {
+        f.viewerHarReagerat = (varde ?? []).filter((g) => g.viewerHasReacted).map((g) => g.content);
+      } else {
+        f[nyckel] = varde;
+      }
     }
-    kommentarer.push(f);
+    return f;
   };
+  const kommentarer = [];
+  const samla = (k) => kommentarer.push({ forfattare: k.author?.login ?? null, ...flaggorFran(k) });
   for (const k of d.comments?.nodes ?? []) {
     samla(k);
     for (const s of k.replies?.nodes ?? []) samla(s);
   }
   $("behorigheter").textContent = JSON.stringify(
-    { viewerPermission: roll ?? "(ej inloggad)", discussion: flaggor, kommentarer },
+    { viewerPermission: roll ?? "(ej inloggad)", discussion: flaggorFran(d), kommentarer },
     null,
     2
   );
