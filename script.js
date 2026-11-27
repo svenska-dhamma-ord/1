@@ -96,6 +96,8 @@ async function uppdateraInloggning() {
   $("ny-diskussion-formular").hidden = !inloggad;
   $("kommentar-formular").hidden = !inloggad;
   $("logga-in-for-kommentar").hidden = inloggad;
+  $("uppdatera-rad-lista").hidden = !inloggad;
+  $("uppdatera-rad-detalj").hidden = !inloggad;
 
   const text = $("inloggning-text");
   if (REPON[repo].privat && harNagonToken && !inloggad) {
@@ -119,6 +121,12 @@ async function uppdateraInloggning() {
       uppdateraInloggning();
     }
   }
+}
+
+// Ingen automatisk hämtning. Inloggade uppdaterar själva med knappen Uppdatera;
+// den som inte är inloggad laddar om sidan om hen vill se nytt.
+function klockan() {
+  return new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
 
 function visaRoll(roll) {
@@ -259,6 +267,7 @@ async function hamtaDiskussioner(fler = false) {
       li.append(lank, meta, pills(d));
       lista.append(li);
     }
+    $("hamtad-lista").textContent = `Hämtad ${klockan()}`;
     const sidor = r.discussions.pageInfo;
     listaCursor = sidor?.hasNextPage ? sidor.endCursor : null;
     $("lista-fler").hidden = !listaCursor;
@@ -347,6 +356,7 @@ async function visaDetalj(nummer) {
     const pillsEl = $("detalj-pills");
     pillsEl.replaceWith(Object.assign(pills(d), { id: "detalj-pills" }));
     sattMarkdown($("detalj-text"), d.bodyHTML, d.bodyText);
+    $("hamtad-detalj").textContent = `Hämtad ${klockan()}`;
 
     byggAtgarder(d, r.viewerPermission);
     byggKommentarer(d);
@@ -727,6 +737,8 @@ function init() {
   });
   $("kommentar-formular").addEventListener("submit", skickaKommentar);
   $("lista-fler").addEventListener("click", () => hamtaDiskussioner(true));
+  $("uppdatera-lista").addEventListener("click", () => hamtaDiskussioner());
+  $("uppdatera-detalj").addEventListener("click", () => visaDetalj(aktuelltNummer));
   $("kommentarer-fler").addEventListener("click", hamtaFlerKommentarer);
   $("avbryt-svar-knapp").addEventListener("click", avbrytSvar);
   $("redigera-formular").addEventListener("submit", sparaRedigering);

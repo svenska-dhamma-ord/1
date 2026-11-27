@@ -179,3 +179,5 @@ ul.svar {
 .markdown ol { list-style: decimal; padding-left: 1.4rem; margin: 0.4rem 0; }
 .markdown li { border: 0; padding: 0.1rem 0; }
 .markdown h1, .markdown h2, .markdown h3 { font-size: 1.1rem; margin: 0.8rem 0 0.3rem; }
+
+.tid { font-size: 0.8rem; color: #666; align-self: center; }
