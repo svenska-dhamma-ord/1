@@ -149,12 +149,90 @@ async function hamtaKategorier() {
   }
 }
 
+// ------------------------------------------------------------ markdown (bodyHTML från GitHub)
+
+// GitHub renderar och rensar redan texten (bodyHTML). Vi bygger ändå om den med en
+// tillåtelselista: okända taggar tas bort men texten behålls, och bara https/http-länkar
+// och bilder släpps igenom. Inget script eller eventattribut kan följa med.
+const TILLATNA_TAGGAR = new Set([
+  "P", "BR", "STRONG", "EM", "B", "I", "DEL", "S", "CODE", "PRE", "BLOCKQUOTE", "UL", "OL",
+  "LI", "H1", "H2", "H3", "H4", "H5", "H6", "A", "HR", "TABLE", "THEAD", "TBODY", "TR", "TH",
+  "TD", "DETAILS", "SUMMARY", "SPAN", "DIV", "SUP", "SUB", "IMG", "KBD",
+]);
+const BORTTAGNA_TAGGAR = new Set([
+  "SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "FORM", "INPUT", "BUTTON", "TEXTAREA",
+  "SELECT", "LINK", "META", "SVG", "MATH", "BASE", "NOSCRIPT", "TEMPLATE",
+]);
+
+function sakerUrl(varde, tillatMailto) {
+  try {
+    const u = new URL(varde, "https://github.com/");
+    const ok = ["https:", "http:", ...(tillatMailto ? ["mailto:"] : [])];
+    return ok.includes(u.protocol) ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function rensaNod(kalla, mal) {
+  for (const barn of [...kalla.childNodes]) {
+    if (barn.nodeType === 3) {
+      mal.append(document.createTextNode(barn.nodeValue));
+      continue;
+    }
+    if (barn.nodeType !== 1) continue;
+    const tagg = barn.tagName;
+    if (BORTTAGNA_TAGGAR.has(tagg)) continue;
+    if (!TILLATNA_TAGGAR.has(tagg)) {
+      rensaNod(barn, mal); // okänd tagg (till exempel g-emoji): behåll bara innehållet
+      continue;
+    }
+    const ny = document.createElement(tagg.toLowerCase());
+    if (tagg === "A") {
+      const href = sakerUrl(barn.getAttribute("href") ?? "", true);
+      if (href) {
+        ny.href = href;
+        ny.rel = "noopener noreferrer nofollow";
+        ny.target = "_blank";
+      }
+    } else if (tagg === "IMG") {
+      const src = sakerUrl(barn.getAttribute("src") ?? "", false);
+      if (!src) continue;
+      ny.src = src;
+      ny.alt = barn.getAttribute("alt") ?? "";
+      ny.loading = "lazy";
+    }
+    rensaNod(barn, ny);
+    mal.append(ny);
+  }
+}
+
+function sattMarkdown(el, html, reservText) {
+  el.textContent = "";
+  if (!html) {
+    el.textContent = reservText ?? "";
+    return;
+  }
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    rensaNod(doc.body, el);
+  } catch {
+    el.textContent = reservText ?? "";
+  }
+}
+
 // ------------------------------------------------------------ lista
 
-async function hamtaDiskussioner() {
+let listaCursor = null;
+
+async function hamtaDiskussioner(fler = false) {
   const status = $("status");
   const lista = $("lista");
-  lista.innerHTML = "";
+  if (!fler) {
+    lista.innerHTML = "";
+    listaCursor = null;
+  }
+  $("lista-fler").hidden = true;
 
   if (REPON[repo].privat && !tokenRackerForRepo()) {
     sattStatus(status, "Logga in för att läsa det privata repot.");
@@ -162,15 +240,14 @@ async function hamtaDiskussioner() {
   }
   sattStatus(status, "Hämtar diskussioner…");
   try {
-    const data = await api("/");
+    const data = await api(fler && listaCursor ? `/?after=${encodeURIComponent(listaCursor)}` : "/");
     const r = data.data.repository;
     if (r.viewerPermission) visaRoll(r.viewerPermission);
     const diskussioner = r.discussions.nodes;
-    if (diskussioner.length === 0) {
+    if (diskussioner.length === 0 && !fler) {
       sattStatus(status, "Inga diskussioner hittades.");
       return;
     }
-    sattStatus(status, "");
     for (const d of diskussioner) {
       const li = document.createElement("li");
       const lank = document.createElement("a");
@@ -182,6 +259,15 @@ async function hamtaDiskussioner() {
       li.append(lank, meta, pills(d));
       lista.append(li);
     }
+    const sidor = r.discussions.pageInfo;
+    listaCursor = sidor?.hasNextPage ? sidor.endCursor : null;
+    $("lista-fler").hidden = !listaCursor;
+    sattStatus(
+      status,
+      r.discussions.totalCount > lista.children.length
+        ? `Visar ${lista.children.length} av ${r.discussions.totalCount} diskussioner.`
+        : ""
+    );
   } catch (fel) {
     sattStatus(status, `Kunde inte hämta diskussioner: ${fel.message}`, true);
     console.error(fel);
@@ -260,7 +346,7 @@ async function visaDetalj(nummer) {
     $("detalj-meta").textContent = `${d.author?.login ?? "okänd"} · ${datum(d.createdAt)} · ${d.category?.name ?? ""}`;
     const pillsEl = $("detalj-pills");
     pillsEl.replaceWith(Object.assign(pills(d), { id: "detalj-pills" }));
-    $("detalj-text").textContent = d.bodyText;
+    sattMarkdown($("detalj-text"), d.bodyHTML, d.bodyText);
 
     byggAtgarder(d, r.viewerPermission);
     byggKommentarer(d);
@@ -300,16 +386,22 @@ function byggAtgarder(d, roll) {
   }
 }
 
-function byggKommentarer(d) {
+let kommentarCursor = null;
+let hamtadeKommentarer = 0;
+
+function byggKommentarer(d, fler = false) {
   const ul = $("detalj-kommentarer");
-  ul.innerHTML = "";
   const noder = d.comments?.nodes ?? [];
-  if (noder.length === 0) {
-    const li = document.createElement("li");
-    li.textContent = "Inga kommentarer än.";
-    ul.append(li);
-    return;
+  if (!fler) {
+    ul.innerHTML = "";
+    hamtadeKommentarer = 0;
+    if (noder.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "Inga kommentarer än.";
+      ul.append(li);
+    }
   }
+  hamtadeKommentarer += noder.length;
   for (const k of noder) {
     const li = kommentarRad(k, true);
     const svar = k.replies?.nodes ?? [];
@@ -318,9 +410,53 @@ function byggKommentarer(d) {
       sub.className = "svar";
       for (const s of svar) sub.append(kommentarRad(s, false, k.id));
       li.append(sub);
+      laggTillFlerSvar(li, sub, k);
     }
     ul.append(li);
   }
+  const sidor = d.comments?.pageInfo;
+  kommentarCursor = sidor?.hasNextPage ? sidor.endCursor : null;
+  const kn = $("kommentarer-fler");
+  kn.hidden = !kommentarCursor;
+  kn.textContent = `Visa fler kommentarer (${(d.comments?.totalCount ?? 0) - hamtadeKommentarer} kvar)`;
+}
+
+async function hamtaFlerKommentarer() {
+  if (!kommentarCursor) return;
+  const status = $("detalj-status");
+  try {
+    const data = await api(
+      `/discussions/${aktuelltNummer}?commentsAfter=${encodeURIComponent(kommentarCursor)}`
+    );
+    byggKommentarer(data.data.repository.discussion, true);
+  } catch (fel) {
+    sattStatus(status, `Kunde inte hämta fler kommentarer: ${fel.message}`, true);
+  }
+}
+
+// Fler svar under en kommentar (GitHub ger de första 30 direkt).
+function laggTillFlerSvar(li, sub, k) {
+  let cursor = k.replies.pageInfo?.hasNextPage ? k.replies.pageInfo.endCursor : null;
+  let hamtade = k.replies.nodes.length;
+  if (!cursor) return;
+  const kn = knapp("", async () => {
+    try {
+      const data = await api(`/comments/${encodeURIComponent(k.id)}/replies?after=${encodeURIComponent(cursor)}`);
+      const r = data.data.replies;
+      for (const s of r.nodes) sub.append(kommentarRad(s, false, k.id));
+      hamtade += r.nodes.length;
+      cursor = r.pageInfo.hasNextPage ? r.pageInfo.endCursor : null;
+      if (cursor) uppdatera(r.totalCount);
+      else kn.remove();
+    } catch (fel) {
+      sattStatus($("detalj-status"), `Kunde inte hämta fler svar: ${fel.message}`, true);
+    }
+  });
+  const uppdatera = (total) => {
+    kn.textContent = `Visa fler svar (${total - hamtade} kvar)`;
+  };
+  uppdatera(k.replies.totalCount);
+  li.append(kn);
 }
 
 function kommentarRad(k, toppniva, foralderId) {
@@ -329,8 +465,10 @@ function kommentarRad(k, toppniva, foralderId) {
   const meta = document.createElement("span");
   meta.className = "meta";
   meta.textContent = `${k.author?.login ?? "okänd"} · ${datum(k.createdAt)}${k.isAnswer ? " · markerat som svar" : ""}`;
-  const text = document.createElement("p");
-  text.textContent = k.deletedAt ? "(borttagen)" : k.bodyText;
+  const text = document.createElement("div");
+  text.className = "markdown";
+  if (k.deletedAt) text.textContent = "(borttagen)";
+  else sattMarkdown(text, k.bodyHTML, k.bodyText);
   const rad = document.createElement("div");
   rad.className = "atgarder";
 
@@ -588,6 +726,8 @@ function init() {
     hanteraRoutning();
   });
   $("kommentar-formular").addEventListener("submit", skickaKommentar);
+  $("lista-fler").addEventListener("click", () => hamtaDiskussioner(true));
+  $("kommentarer-fler").addEventListener("click", hamtaFlerKommentarer);
   $("avbryt-svar-knapp").addEventListener("click", avbrytSvar);
   $("redigera-formular").addEventListener("submit", sparaRedigering);
   $("redigera-avbryt").addEventListener("click", () => {

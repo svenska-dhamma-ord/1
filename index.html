@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Diskussioner</title>
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
   <main>
@@ -46,6 +46,7 @@
 
       <p class="status" id="status">Hämtar diskussioner…</p>
       <ul id="lista"></ul>
+      <button type="button" id="lista-fler" hidden>Visa fler diskussioner</button>
     </section>
 
     <section id="vy-detalj" hidden>
@@ -53,7 +54,7 @@
       <h2 id="detalj-titel"></h2>
       <p class="meta" id="detalj-meta"></p>
       <p class="pills" id="detalj-pills"></p>
-      <p id="detalj-text"></p>
+      <div id="detalj-text" class="markdown"></div>
 
       <div class="atgarder" id="detalj-atgarder"></div>
       <form id="redigera-formular" hidden>
@@ -68,6 +69,7 @@
 
       <h3>Kommentarer</h3>
       <ul id="detalj-kommentarer"></ul>
+      <button type="button" id="kommentarer-fler" hidden>Visa fler kommentarer</button>
 
       <form id="kommentar-formular" hidden>
         <p id="svarar-pa" hidden>
@@ -91,6 +93,6 @@
       </details>
     </section>
   </main>
-  <script src="script.js?v=5"></script>
+  <script src="script.js?v=6"></script>
 </body>
 </html>
