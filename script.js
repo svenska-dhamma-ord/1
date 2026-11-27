@@ -97,6 +97,7 @@ async function uppdateraInloggning() {
   $("kommentar-formular").hidden = !inloggad;
   $("logga-in-for-kommentar").hidden = inloggad;
   $("uppdatera-rad-lista").hidden = !inloggad;
+  $("filter-mina").hidden = !inloggad;
   $("uppdatera-rad-detalj").hidden = !inloggad;
 
   const text = $("inloggning-text");
@@ -229,9 +230,142 @@ function sattMarkdown(el, html, reservText) {
   }
 }
 
+// ------------------------------------------------------------ reaktioner
+
+const EMOJI = {
+  THUMBS_UP: "👍", THUMBS_DOWN: "👎", LAUGH: "😄", HOORAY: "🎉",
+  CONFUSED: "😕", HEART: "❤️", ROCKET: "🚀", EYES: "👀",
+};
+
+// Räknare kommer från GitHub (reactionGroups). Inloggade med viewerCanReact kan lägga till
+// och ta bort sina egna; andra ser bara de som har någon reaktion.
+function byggReaktioner(mal, subjektId, grupper, egna, kan) {
+  mal.innerHTML = "";
+  const harReagerat = Object.fromEntries((egna ?? []).map((g) => [g.content, g.viewerHasReacted]));
+  const antal = Object.fromEntries((grupper ?? []).map((g) => [g.content, g.reactors.totalCount]));
+  for (const innehall of Object.keys(EMOJI)) {
+    const n = antal[innehall] ?? 0;
+    if (!kan && n === 0) continue;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.disabled = !kan;
+    b.className = `${harReagerat[innehall] ? "aktiv" : ""} ${n === 0 ? "noll" : ""}`.trim();
+    b.textContent = `${EMOJI[innehall]} ${n}`;
+    b.setAttribute("aria-pressed", String(Boolean(harReagerat[innehall])));
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        const data = await api("/react", {
+          method: "POST",
+          inloggad: true,
+          body: { id: subjektId, content: innehall, on: !harReagerat[innehall] },
+        });
+        const subjekt = (data.data.addReaction ?? data.data.removeReaction).subject;
+        byggReaktioner(
+          mal,
+          subjektId,
+          subjekt.reactionGroups,
+          subjekt.reactionGroups.map((g) => ({ content: g.content, viewerHasReacted: g.viewerHasReacted })),
+          kan
+        );
+      } catch (fel) {
+        b.disabled = false;
+        sattStatus($("atgard-status"), `Kunde inte reagera: ${fel.message}`, true);
+      }
+    });
+    mal.append(b);
+  }
+}
+
+// ------------------------------------------------------------ hjälptext och länkar
+
+// Byggs av GitHubs flaggor (inte en egen lista): vad du får och inte får göra i just den här tråden.
+function hjalptext(d, roll) {
+  if (!d.viewerCanReact && d.viewerCanUpdate === undefined) return "";
+  const write = WRITE_ELLER_HOGRE.includes(roll);
+  const kan = [], kanEj = [];
+  const v = (ok, text) => (ok ? kan : kanEj).push(text);
+  v(true, "kommentera");
+  v(d.viewerCanReact, "reagera");
+  v(d.viewerCanUpdate, "redigera tråden");
+  v(d.viewerCanDelete, "radera tråden");
+  v(d.closed ? d.viewerCanReopen : d.viewerCanClose, d.closed ? "öppna tråden igen" : "stänga tråden");
+  v(write, "låsa tråden");
+  v(d.viewerCanLabel && write, "märka som beslut");
+  return `Din roll: ${roll ?? "okänd"}. Du kan ${kan.join(", ")}.` +
+    (kanEj.length ? ` Du kan inte ${kanEj.join(", ")}.` : "");
+}
+
+function trådLank(nummer, kommentarId) {
+  const bas = `${location.origin}${location.pathname}#r/${repo}/d/${nummer}`;
+  return kommentarId ? `${bas}/c/${kommentarId}` : bas;
+}
+
+async function kopieraLank(text, statusEl) {
+  try {
+    await navigator.clipboard.writeText(text);
+    sattStatus(statusEl, "Länken är kopierad.");
+  } catch {
+    sattStatus(statusEl, `Kopiera länken: ${text}`);
+  }
+}
+
 // ------------------------------------------------------------ lista
 
 let listaCursor = null;
+let filter = { q: "", kategori: "", status: "", sort: "", obesvarade: false, mina: false };
+
+function lasFilter() {
+  filter = {
+    q: $("sok-text").value.trim(),
+    kategori: $("filter-kategori").value,
+    status: $("filter-status").value,
+    sort: $("filter-sort").value,
+    obesvarade: $("filter-obesvarade").checked,
+    mina: false,
+  };
+}
+
+function nollstallFilter() {
+  filter = { q: "", kategori: "", status: "", sort: "", obesvarade: false, mina: false };
+  $("sok-text").value = "";
+  $("filter-kategori").value = "";
+  $("filter-status").value = "";
+  $("filter-sort").value = "";
+  $("filter-obesvarade").checked = false;
+}
+
+function listSokvag(efter) {
+  const p = new URLSearchParams();
+  if (filter.q || filter.mina) {
+    if (filter.q) p.set("q", filter.q);
+    if (filter.mina) p.set("mine", "1");
+    return `/search?${p}`;
+  }
+  if (efter) p.set("after", efter);
+  if (filter.kategori) p.set("category", filter.kategori);
+  if (filter.status) p.set("state", filter.status);
+  if (filter.sort) p.set("sort", filter.sort);
+  if (filter.obesvarade) p.set("answered", "0");
+  const q = p.toString();
+  return q ? `/?${q}` : "/";
+}
+
+let kategorierIFilter = null; // repo som filtrets kategorier hämtats för
+
+async function fyllFilterKategorier() {
+  if (kategorierIFilter === repo) return;
+  if (REPON[repo].privat && !tokenRackerForRepo()) return;
+  try {
+    const data = await api("/categories");
+    const val = $("filter-kategori");
+    val.length = 1;
+    for (const k of data.data.repository.discussionCategories.nodes) val.append(new Option(k.name, k.id));
+    kategorierIFilter = repo;
+  } catch (fel) {
+    sattStatus($("status"), `Kunde inte hämta kategorier: ${fel.message}`, true);
+  }
+}
 
 async function hamtaDiskussioner(fler = false) {
   const status = $("status");
@@ -248,12 +382,14 @@ async function hamtaDiskussioner(fler = false) {
   }
   sattStatus(status, "Hämtar diskussioner…");
   try {
-    const data = await api(fler && listaCursor ? `/?after=${encodeURIComponent(listaCursor)}` : "/");
-    const r = data.data.repository;
+    const data = await api(listSokvag(fler ? listaCursor : null));
+    // Sökning ger data.search, vanlig lista data.repository.discussions
+    const r = data.data.repository ?? { discussions: { nodes: data.data.search.nodes, totalCount: data.data.search.discussionCount } };
     if (r.viewerPermission) visaRoll(r.viewerPermission);
     const diskussioner = r.discussions.nodes;
     if (diskussioner.length === 0 && !fler) {
-      sattStatus(status, "Inga diskussioner hittades.");
+      sattStatus(status, filter.q || filter.mina ? "Inga träffar." : "Inga diskussioner hittades.");
+      $("hamtad-lista").textContent = `Hämtad ${klockan()}`;
       return;
     }
     for (const d of diskussioner) {
@@ -326,7 +462,7 @@ function bekraftaKnapp(text, onConfirm) {
   return b;
 }
 
-async function visaDetalj(nummer) {
+async function visaDetalj(nummer, kommentarId = null) {
   aktuelltNummer = nummer;
   avbrytSvar();
   $("redigera-formular").hidden = true;
@@ -356,12 +492,24 @@ async function visaDetalj(nummer) {
     const pillsEl = $("detalj-pills");
     pillsEl.replaceWith(Object.assign(pills(d), { id: "detalj-pills" }));
     sattMarkdown($("detalj-text"), d.bodyHTML, d.bodyText);
+    byggReaktioner($("detalj-reaktioner"), d.id, d.reactionGroups, d.viewerHasReactions, Boolean(d.viewerCanReact));
+    $("oppna-github").href = d.url;
+    $("hjalptext").textContent = hjalptext(d, r.viewerPermission);
     $("hamtad-detalj").textContent = `Hämtad ${klockan()}`;
 
     byggAtgarder(d, r.viewerPermission);
     byggKommentarer(d);
     $("kommentar-formular").hidden = !tokenRackerForRepo();
     visaBehorigheter(d, r.viewerPermission);
+    if (kommentarId) {
+      const mal = document.getElementById(`c-${kommentarId}`);
+      if (mal) {
+        mal.classList.add("markerad");
+        mal.scrollIntoView({ block: "center" });
+      } else {
+        sattStatus(status, "Kommentaren finns inte på den här sidan (den kan vara raderad eller ligga bland fler kommentarer).");
+      }
+    }
   } catch (fel) {
     sattStatus(status, `Kunde inte hämta diskussionen: ${fel.message}`, true);
     console.error(fel);
@@ -471,6 +619,7 @@ function laggTillFlerSvar(li, sub, k) {
 
 function kommentarRad(k, toppniva, foralderId) {
   const li = document.createElement("li");
+  li.id = `c-${k.id}`;
   if (k.isAnswer) li.className = "svar-markerat";
   const meta = document.createElement("span");
   meta.className = "meta";
@@ -499,7 +648,13 @@ function kommentarRad(k, toppniva, foralderId) {
   if (k.viewerCanDelete) {
     rad.append(bekraftaKnapp("Radera", () => raderaKommentar(k.id)));
   }
-  li.append(meta, text, rad);
+  const reaktioner = document.createElement("div");
+  reaktioner.className = "reaktioner";
+  if (!k.deletedAt) {
+    byggReaktioner(reaktioner, k.id, k.reactionGroups, k.viewerHasReactions, Boolean(k.viewerCanReact));
+    rad.append(knapp("Länk", () => kopieraLank(trådLank(aktuelltNummer, k.id), $("detalj-status"))));
+  }
+  li.append(meta, text, reaktioner, rad);
   return li;
 }
 
@@ -686,8 +841,10 @@ function lasRoute() {
   // #r/<repo>            lista
   // #r/<repo>/d/<n>      detalj
   // #d/<n>               (gammal form, standardrepot)
-  let m = location.hash.match(/^#r\/([\w-]+)(?:\/d\/(\d+))?$/);
-  if (m && REPON[m[1]]) return { repo: m[1], nummer: m[2] ? Number(m[2]) : null };
+  let m = location.hash.match(/^#r\/([\w-]+)(?:\/d\/(\d+)(?:\/c\/([\w-]+))?)?$/);
+  if (m && REPON[m[1]]) {
+    return { repo: m[1], nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
+  }
   m = location.hash.match(/^#d\/(\d+)$/);
   if (m) return { repo: STANDARD_REPO, nummer: Number(m[1]) };
   return { repo: repo, nummer: null };
@@ -702,10 +859,13 @@ async function hanteraRoutning() {
   }
   if (bytteRepo) {
     visaRoll(null);
+    nollstallFilter();
+    kategorierIFilter = null;
+    $("filter-kategori").length = 1;
   }
   await uppdateraInloggning();
   if (route.nummer) {
-    visaDetalj(route.nummer);
+    visaDetalj(route.nummer, route.kommentar ?? null);
   } else {
     visaListVy();
     hamtaKategorier();
@@ -737,6 +897,26 @@ function init() {
   });
   $("kommentar-formular").addEventListener("submit", skickaKommentar);
   $("lista-fler").addEventListener("click", () => hamtaDiskussioner(true));
+  $("filter-ruta").addEventListener("toggle", () => {
+    if ($("filter-ruta").open) fyllFilterKategorier();
+  });
+  $("filter-formular").addEventListener("submit", (e) => {
+    e.preventDefault();
+    lasFilter();
+    hamtaDiskussioner();
+  });
+  $("filter-rensa").addEventListener("click", () => {
+    nollstallFilter();
+    hamtaDiskussioner();
+  });
+  $("filter-mina").addEventListener("click", () => {
+    nollstallFilter();
+    filter.mina = true;
+    hamtaDiskussioner();
+  });
+  $("kopiera-lank").addEventListener("click", () =>
+    kopieraLank(trådLank(aktuelltNummer), $("detalj-status"))
+  );
   $("uppdatera-lista").addEventListener("click", () => hamtaDiskussioner());
   $("uppdatera-detalj").addEventListener("click", () => visaDetalj(aktuelltNummer));
   $("kommentarer-fler").addEventListener("click", hamtaFlerKommentarer);

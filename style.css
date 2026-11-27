@@ -181,3 +181,47 @@ ul.svar {
 .markdown h1, .markdown h2, .markdown h3 { font-size: 1.1rem; margin: 0.8rem 0 0.3rem; }
 
 .tid { font-size: 0.8rem; color: #666; align-self: center; }
+
+/* filter, reaktioner, länkar, hjälptext */
+#filter-ruta { margin: 0.5rem 0; }
+#filter-ruta summary { cursor: pointer; font-weight: 600; }
+form label.kryss { flex-direction: row; align-items: center; gap: 0.4rem; }
+.reaktioner { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.4rem 0; }
+.reaktioner button {
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  border: 1px solid #ccc;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+}
+.reaktioner button.aktiv { background: #dbe8ff; border-color: #0b5fff; }
+.reaktioner button.noll { opacity: 0.55; }
+.reaktioner button:disabled { cursor: default; }
+li.markerad { background: #fff8c5; }
+.atgarder a { align-self: center; font-size: 0.9rem; }
+
+@media (prefers-color-scheme: dark) {
+  body { background: #0f1115; color: #e6e6e6; }
+  .status, .meta, .tid, h1 small { color: #a0a4ab; }
+  .status.error { color: #ff7b8a; }
+  li, form, #repo-val a { border-color: #2c313a; }
+  li a, #repo-val a, .atgarder a { color: #7aa7ff; }
+  #repo-val a.aktiv { background: #2f6bff; color: #fff; border-color: #2f6bff; }
+  input, textarea, select, button {
+    background: #1a1d24;
+    color: #e6e6e6;
+    border: 1px solid #3a404b;
+  }
+  .pill { background: #2a2f38; color: #e6e6e6; }
+  .pill.beslut { background: #3d5a1c; }
+  .pill.svar { background: #1d4d2c; }
+  .pill.stangd { background: #3d2f66; }
+  .pill.last { background: #5a4116; }
+  #behorigheter, .markdown pre, .markdown code { background: #1a1d24; }
+  .markdown blockquote { border-color: #3a404b; color: #b0b4bb; }
+  .markdown th, .markdown td { border-color: #3a404b; }
+  .reaktioner button { border-color: #3a404b; }
+  .reaktioner button.aktiv { background: #1c3566; border-color: #2f6bff; }
+  li.markerad { background: #3a3414; }
+}

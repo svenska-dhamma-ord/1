@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Diskussioner</title>
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <main>
@@ -44,6 +44,37 @@
         <p class="status" id="skapa-status"></p>
       </form>
 
+      <details id="filter-ruta">
+        <summary>Filter och sök</summary>
+        <form id="filter-formular">
+          <label>Sök i titel och text
+            <input type="search" id="sok-text" maxlength="100" placeholder="ett eller flera ord">
+          </label>
+          <label>Kategori
+            <select id="filter-kategori"><option value="">Alla</option></select>
+          </label>
+          <label>Status
+            <select id="filter-status">
+              <option value="">Alla</option>
+              <option value="open">Öppna</option>
+              <option value="closed">Stängda</option>
+            </select>
+          </label>
+          <label>Sortera
+            <select id="filter-sort">
+              <option value="">Nyast först</option>
+              <option value="updated">Senast aktiv</option>
+            </select>
+          </label>
+          <label class="kryss"><input type="checkbox" id="filter-obesvarade"> Bara obesvarade frågor</label>
+          <div class="atgarder">
+            <button type="submit">Visa</button>
+            <button type="button" id="filter-rensa">Rensa</button>
+            <button type="button" id="filter-mina" hidden>Mina trådar</button>
+          </div>
+          <p class="status" id="filter-not">Vid sökning och Mina trådar används inte kategori, status och sortering (GitHub söker i hela repot, upp till 30 träffar).</p>
+        </form>
+      </details>
       <div class="atgarder" id="uppdatera-rad-lista" hidden>
         <button type="button" id="uppdatera-lista">Uppdatera</button>
         <span class="tid" id="hamtad-lista"></span>
@@ -65,6 +96,12 @@
       <p class="meta" id="detalj-meta"></p>
       <p class="pills" id="detalj-pills"></p>
       <div id="detalj-text" class="markdown"></div>
+      <div class="reaktioner" id="detalj-reaktioner"></div>
+      <div class="atgarder">
+        <a id="oppna-github" href="#" target="_blank" rel="noopener noreferrer">Öppna på GitHub</a>
+        <button type="button" id="kopiera-lank">Kopiera länk</button>
+      </div>
+      <p class="status" id="hjalptext"></p>
 
       <div class="atgarder" id="detalj-atgarder"></div>
       <form id="redigera-formular" hidden>
@@ -103,6 +140,6 @@
       </details>
     </section>
   </main>
-  <script src="script.js?v=8"></script>
+  <script src="script.js?v=9"></script>
 </body>
 </html>
