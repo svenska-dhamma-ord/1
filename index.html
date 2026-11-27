@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Diskussioner</title>
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
   <main>
@@ -19,6 +19,7 @@
     <nav id="typ-val" aria-label="Typ">
       <a href="#r/1" data-typ="d">Diskussioner</a>
       <a href="#r/1/i" data-typ="i">Ärenden</a>
+      <a href="#r/1/w" data-typ="w">Ord</a>
       <a href="#r/1/o" data-typ="o">Översikt</a>
     </nav>
 
@@ -253,9 +254,48 @@
         <pre id="arende-behorigheter"></pre>
       </details>
     </section>
+
+    <section id="vy-ord" hidden>
+      <div id="ord-lista-del" hidden>
+        <h2>Ord</h2>
+        <p class="status">Varje ord kan ha många trådar. En tråd hör till ordet genom nyckeln sist i titeln, till exempel <code>(ord:sati)</code>.</p>
+        <form id="ord-ga-formular" class="atgarder">
+          <label>Gå till ord (eller skapa det första) <input type="text" id="ord-ga-text" maxlength="60" required placeholder="till exempel sati"></label>
+          <button type="submit">Öppna</button>
+          <button type="button" id="ord-lista-uppdatera">Uppdatera</button>
+        </form>
+        <p class="status" id="ord-lista-status"></p>
+        <ul id="ord-lista"></ul>
+      </div>
+
+      <div id="ord-ett-del" hidden>
+        <div class="atgarder">
+          <a href="#r/1/w" id="ord-tillbaka">← Alla ord</a>
+          <button type="button" id="ord-uppdatera">Uppdatera</button>
+          <span class="tid" id="ord-hamtad"></span>
+        </div>
+        <h2 id="ord-rubrik"></h2>
+        <p class="meta">Nyckel: <code id="ord-nyckel"></code></p>
+        <p class="status" id="ord-sammanfattning"></p>
+        <div class="atgarder">
+          <button type="button" id="ord-ny-knapp" hidden>Ny diskussion om ordet</button>
+        </div>
+        <form id="ord-ny-formular" hidden>
+          <label>Titel <input type="text" id="ord-ny-titel" maxlength="150" required></label>
+          <label class="kryss"><input type="checkbox" id="ord-forslag-kryss"> Det här är ett förslag (får statusen väntar)</label>
+          <label id="ord-forslag-falt" hidden>Föreslaget svenskt ord <input type="text" id="ord-forslag-text" maxlength="80"></label>
+          <label>Text <textarea id="ord-ny-text" required></textarea></label>
+          <button type="submit">Skapa tråd</button>
+          <p class="status" id="ord-ny-status"></p>
+        </form>
+        <p class="status" id="ord-status"></p>
+        <ul id="ord-tradar" class="ord-tradar"></ul>
+      </div>
+    </section>
   </main>
   <script src="arenden.js?v=4"></script>
+  <script src="ord.js?v=1"></script>
   <script src="extra.js?v=4"></script>
-  <script src="script.js?v=16"></script>
+  <script src="script.js?v=17"></script>
 </body>
 </html>

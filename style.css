@@ -358,3 +358,32 @@ button.vik { margin-left: auto; }
   nav, form, details, button, .atgarder, #genvagar, #tema-knapp, .reaktioner, #filter-ruta { display: none !important; }
   body { max-width: none; color: #000; background: #fff; }
 }
+
+/* Ordvyn: flera trådar per ord, fällbara */
+.ord-tradar { list-style: none; padding: 0; }
+.ord-trad { border: 1px solid #d0d4da; border-radius: 6px; padding: 0.4rem 0.7rem; margin: 0.4rem 0; }
+.ord-trad > summary { cursor: pointer; }
+.ord-inre { margin-top: 0.6rem; }
+.ord-kommentarer { list-style: none; padding-left: 0.8rem; border-left: 3px solid #d0d4da; }
+.ord-status-rad { align-items: center; }
+.ord-status-rad input[type="text"] { flex: 1 1 10rem; }
+.pill.status-väntar { background: #fdf0b0; }
+.pill.status-granskad { background: #c7f0d2; }
+.pill.status-beslutad { background: #d5f692; }
+.pill.status-avvisad { background: #f6c9c9; }
+@media (prefers-color-scheme: dark) {
+:root:not([data-tema="ljus"]) .ord-trad,
+:root:not([data-tema="ljus"]) .ord-kommentarer { border-color: #3a404b; }
+:root:not([data-tema="ljus"]) .pill.status-väntar { background: #5a4d16; }
+:root:not([data-tema="ljus"]) .pill.status-granskad { background: #1d4d2c; }
+:root:not([data-tema="ljus"]) .pill.status-beslutad { background: #3d5a1c; }
+:root:not([data-tema="ljus"]) .pill.status-avvisad { background: #5a2020; }
+}
+:root[data-tema="ljus"] .ord-trad,
+:root[data-tema="ljus"] .ord-kommentarer { border-color: #d0d4da; }
+:root[data-tema="mork"] .ord-trad,
+:root[data-tema="mork"] .ord-kommentarer { border-color: #3a404b; }
+:root[data-tema="mork"] .pill.status-väntar { background: #5a4d16; }
+:root[data-tema="mork"] .pill.status-granskad { background: #1d4d2c; }
+:root[data-tema="mork"] .pill.status-beslutad { background: #3d5a1c; }
+:root[data-tema="mork"] .pill.status-avvisad { background: #5a2020; }

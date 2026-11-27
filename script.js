@@ -1158,7 +1158,7 @@ function visaListVy() {
 function markeraTyp(typ) {
   for (const a of document.querySelectorAll("#typ-val a")) {
     a.classList.toggle("aktiv", a.dataset.typ === typ);
-    a.href = a.dataset.typ === "i" ? `#r/${repo}/i` : a.dataset.typ === "o" ? `#r/${repo}/o` : `#r/${repo}`;
+    a.href = a.dataset.typ === "i" ? `#r/${repo}/i` : a.dataset.typ === "o" ? `#r/${repo}/o` : a.dataset.typ === "w" ? `#r/${repo}/w` : `#r/${repo}`;
   }
 }
 
@@ -1176,6 +1176,8 @@ function lasRoute() {
   // #d/<n>               (gammal form, standardrepot)
   let m = hashUtanFraga().match(/^#r\/([\w-]+)\/o$/);
   if (m && REPON[m[1]]) return { repo: m[1], typ: "o", nummer: null, kommentar: null };
+  m = hashUtanFraga().match(/^#r\/([\w-]+)\/w(?:\/((?:ord|kategori):[a-z0-9-]{1,80}))?$/);
+  if (m && REPON[m[1]]) return { repo: m[1], typ: "w", nummer: null, kommentar: null, nyckel: m[2] ?? null };
   m = hashUtanFraga().match(/^#r\/([\w-]+)\/i(?:\/(\d+)(?:\/c\/([\w-]+))?)?$/);
   if (m && REPON[m[1]]) {
     return { repo: m[1], typ: "i", nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
@@ -1203,7 +1205,11 @@ async function hanteraRoutning() {
     $("filter-kategori").length = 1;
   }
   await uppdateraInloggning();
-  if (route.typ === "o") {
+  $("vy-ord").hidden = true;
+  if (route.typ === "w") {
+    if (route.nyckel) visaOrd(route.nyckel);
+    else visaOrdLista();
+  } else if (route.typ === "o") {
     visaOversikt();
   } else if (route.typ === "i") {
     if (route.nummer) visaArende(route.nummer, route.kommentar ?? null);
@@ -1307,6 +1313,7 @@ function init() {
   });
   for (const id of ["ny-text", "kommentar-text", "redigera-text"]) medForhandsvisning($(id));
   initArenden();
+  initOrd();
   initExtra();
   window.addEventListener("hashchange", hanteraRoutning);
 
