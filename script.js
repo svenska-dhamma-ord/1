@@ -137,6 +137,7 @@ function klockan(iso) {
 
 function visaRoll(roll) {
   aktuellRoll = roll ?? null;
+  $("exportera-allt").hidden = !WRITE_ELLER_HOGRE.includes(aktuellRoll);
   $("inloggad-roll").textContent = roll ?? "?";
 }
 
@@ -593,6 +594,9 @@ async function hamtaDiskussioner(fler = false) {
       $("hamtad-lista").textContent = `Hämtad ${klockan()}`;
       return;
     }
+    const utanFilter = !filter.q && !filter.mina && !filter.kategori && !filter.status && !filter.sort && !filter.obesvarade;
+    const fasta = new Set(utanFilter && !fler ? (r.pinnedDiscussions?.nodes ?? []).map((n) => n.discussion?.number) : []);
+    const fastaRader = [];
     for (const d of diskussioner) {
       const li = document.createElement("li");
       const lank = document.createElement("a");
@@ -601,9 +605,19 @@ async function hamtaDiskussioner(fler = false) {
       const meta = document.createElement("span");
       meta.className = "meta";
       meta.textContent = `${d.author?.login ?? "okänd"} · ${datum(d.createdAt)} · ${d.category?.name ?? ""}`;
-      li.append(lank, meta, pills(d));
+      const markor = pills(d);
+      if (fasta.has(d.number)) {
+        const p = document.createElement("span");
+        p.className = "pill fast";
+        p.textContent = "📌 fäst";
+        markor.prepend(p);
+        fastaRader.push(li);
+      }
+      if (arNytt("d", d)) markor.prepend(nyttMarke());
+      li.append(lank, meta, markor);
       lista.append(li);
     }
+    for (const li of fastaRader.reverse()) lista.prepend(li); // fästa trådar överst, som på GitHub
     $("hamtad-lista").textContent = `Hämtad ${klockan()}`;
     const sidor = r.discussions.pageInfo;
     listaCursor = sidor?.hasNextPage ? sidor.endCursor : null;
@@ -670,6 +684,7 @@ async function visaDetalj(nummer, kommentarId = null) {
   $("vy-lista").hidden = true;
   $("vy-arenden").hidden = true;
   $("vy-arende").hidden = true;
+  $("vy-oversikt").hidden = true;
   $("vy-detalj").hidden = false;
   markeraTyp("d");
 
@@ -696,6 +711,9 @@ async function visaDetalj(nummer, kommentarId = null) {
     const pillsEl = $("detalj-pills");
     pillsEl.replaceWith(Object.assign(pills(d), { id: "detalj-pills" }));
     sattMarkdown($("detalj-text"), d.bodyHTML, d.bodyText);
+    markeraSedd("d", nummer);
+    aterstallUtkast($("kommentar-text"));
+    byggSvarsruta(d);
     byggReaktioner($("detalj-reaktioner"), d.id, d.reactionGroups, d.viewerHasReactions, Boolean(d.viewerCanReact));
     for (const gammal of $("detalj-reaktioner").querySelectorAll(".upprost")) gammal.remove();
     const upp = upprostaKnapp(d.id, d.upvoteCount, d.viewerHasUpvoted, Boolean(d.viewerCanUpvote));
@@ -777,9 +795,36 @@ function byggAtgarder(d, roll) {
 let kommentarCursor = null;
 let hamtadeKommentarer = 0;
 
+// Svaret på en fråga visas överst, med en länk till kommentaren.
+function byggSvarsruta(d) {
+  const ruta = $("detalj-svar");
+  ruta.hidden = true;
+  ruta.innerHTML = "";
+  if (!d.answer) return;
+  const rubrik = document.createElement("strong");
+  rubrik.textContent = `✔ Svar av ${d.answer.author?.login ?? "okänd"}`;
+  const text = document.createElement("div");
+  text.className = "markdown";
+  sattMarkdown(text, d.answer.bodyHTML, d.answer.bodyText);
+  ruta.append(rubrik, text);
+  const mal = () => document.getElementById(`c-${d.answer.id}`);
+  const hit = knapp("Gå till svaret", () => {
+    const m = mal();
+    if (m) {
+      m.classList.add("markerad");
+      m.scrollIntoView({ block: "center" });
+    } else {
+      sattStatus($("detalj-status"), "Svaret ligger bland kommentarer som inte är hämtade än.");
+    }
+  });
+  ruta.append(hit);
+  ruta.hidden = false;
+}
+
 function byggKommentarer(d, fler = false) {
   const ul = $("detalj-kommentarer");
-  const noder = d.comments?.nodes ?? [];
+  const noder = [...(d.comments?.nodes ?? [])];
+  if (!fler && $("kommentar-ordning").value === "nyast") noder.reverse();
   if (!fler) {
     ul.innerHTML = "";
     hamtadeKommentarer = 0;
@@ -1039,7 +1084,7 @@ async function skickaKommentar(event) {
       body: { body: $("kommentar-text").value.trim(), replyToId: svararPaKommentarId },
     });
     sattStatus(status, "Kommentaren skickad!");
-    $("kommentar-text").value = "";
+    tomtFalt($("kommentar-text"));
     avbrytSvar();
     await visaDetalj(aktuelltNummer);
   } catch (fel) {
@@ -1063,8 +1108,8 @@ async function skapaDiskussion(event) {
       },
     });
     sattStatus(status, "Diskussionen skapad!");
-    $("ny-titel").value = "";
-    $("ny-text").value = "";
+    tomtFalt($("ny-titel"));
+    tomtFalt($("ny-text"));
     await hamtaDiskussioner();
   } catch (fel) {
     sattStatus(status, `Kunde inte skapa diskussionen: ${fel.message}`, true);
@@ -1078,6 +1123,7 @@ function visaListVy() {
   $("vy-detalj").hidden = true;
   $("vy-arenden").hidden = true;
   $("vy-arende").hidden = true;
+  $("vy-oversikt").hidden = true;
   $("vy-lista").hidden = false;
   markeraTyp("d");
 }
@@ -1085,7 +1131,7 @@ function visaListVy() {
 function markeraTyp(typ) {
   for (const a of document.querySelectorAll("#typ-val a")) {
     a.classList.toggle("aktiv", a.dataset.typ === typ);
-    a.href = a.dataset.typ === "i" ? `#r/${repo}/i` : `#r/${repo}`;
+    a.href = a.dataset.typ === "i" ? `#r/${repo}/i` : a.dataset.typ === "o" ? `#r/${repo}/o` : `#r/${repo}`;
   }
 }
 
@@ -1093,7 +1139,9 @@ function lasRoute() {
   // #r/<repo>            lista
   // #r/<repo>/d/<n>      detalj
   // #d/<n>               (gammal form, standardrepot)
-  let m = location.hash.match(/^#r\/([\w-]+)\/i(?:\/(\d+)(?:\/c\/([\w-]+))?)?$/);
+  let m = location.hash.match(/^#r\/([\w-]+)\/o$/);
+  if (m && REPON[m[1]]) return { repo: m[1], typ: "o", nummer: null, kommentar: null };
+  m = location.hash.match(/^#r\/([\w-]+)\/i(?:\/(\d+)(?:\/c\/([\w-]+))?)?$/);
   if (m && REPON[m[1]]) {
     return { repo: m[1], typ: "i", nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
   }
@@ -1120,7 +1168,9 @@ async function hanteraRoutning() {
     $("filter-kategori").length = 1;
   }
   await uppdateraInloggning();
-  if (route.typ === "i") {
+  if (route.typ === "o") {
+    visaOversikt();
+  } else if (route.typ === "i") {
     if (route.nummer) visaArende(route.nummer, route.kommentar ?? null);
     else visaArendeLista();
   } else if (route.nummer) {
@@ -1186,6 +1236,7 @@ function init() {
   });
   for (const id of ["ny-text", "kommentar-text", "redigera-text"]) medForhandsvisning($(id));
   initArenden();
+  initExtra();
   window.addEventListener("hashchange", hanteraRoutning);
 
   hanteraRoutning();

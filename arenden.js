@@ -11,7 +11,7 @@ let arendeKommentarerHamtade = 0;
 const STANG_ORSAKER = [["COMPLETED", "klart"], ["NOT_PLANNED", "ej planerat"], ["DUPLICATE", "dubblett"]];
 
 function visaArendeSektion(id) {
-  for (const s of ["vy-lista", "vy-detalj", "vy-arenden", "vy-arende"]) $(s).hidden = s !== id;
+  for (const s of ["vy-lista", "vy-detalj", "vy-arenden", "vy-arende", "vy-oversikt"]) $(s).hidden = s !== id;
   markeraTyp("i");
 }
 
@@ -50,7 +50,9 @@ async function hamtaArenden(fler = false) {
       const meta = document.createElement("span");
       meta.className = "meta";
       meta.textContent = `${a.author?.login ?? "okänd"} · ${datum(a.createdAt)} · ${a.comments.totalCount} kommentarer`;
-      li.append(lank, meta, pills({ ...a, labels: a.labels }));
+      const markor = pills({ ...a, labels: a.labels });
+      if (arNytt("i", a)) markor.prepend(nyttMarke());
+      li.append(lank, meta, markor);
       lista.append(li);
     }
     const sidor = r.issues.pageInfo;
@@ -77,8 +79,8 @@ async function skapaArende(event) {
       body: { title: $("arende-ny-titel").value.trim(), body: $("arende-ny-text").value.trim() },
     });
     sattStatus(status, "Ärendet är skapat!");
-    $("arende-ny-titel").value = "";
-    $("arende-ny-text").value = "";
+    tomtFalt($("arende-ny-titel"));
+    tomtFalt($("arende-ny-text"));
     await hamtaArenden();
   } catch (fel) {
     sattStatus(status, `Kunde inte skapa ärendet: ${fel.message}`, true);
@@ -110,6 +112,8 @@ async function visaArende(nummer, kommentarId = null) {
     $("arende-meta").textContent = `${a.author?.login ?? "okänd"} · ${datum(a.createdAt)}`;
     $("arende-pills").replaceWith(Object.assign(pills(a), { id: "arende-pills" }));
     sattMarkdown($("arende-text"), a.bodyHTML, a.bodyText);
+    markeraSedd("i", nummer);
+    aterstallUtkast($("arende-kommentar-text"));
     const rm = $("arende-redigerad");
     rm.innerHTML = "";
     const marke = redigeratMarke(a, a.id);
@@ -260,7 +264,7 @@ async function skickaArendeKommentar(event) {
   sattStatus(status, "Skickar…");
   try {
     await api(`/issues/${arendeNr}/comments`, { method: "POST", inloggad: true, body: { body: $("arende-kommentar-text").value.trim() } });
-    $("arende-kommentar-text").value = "";
+    tomtFalt($("arende-kommentar-text"));
     sattStatus(status, "Kommentaren skickad!");
     await visaArende(arendeNr);
   } catch (fel) {

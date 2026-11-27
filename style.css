@@ -252,3 +252,29 @@ button[aria-pressed="true"].aktiv { background: #dbe8ff; border-color: #0b5fff; 
   .historik pre { background: #1a1d24; }
   button[aria-pressed="true"].aktiv { background: #1c3566; border-color: #2f6bff; }
 }
+
+/* nytt, fäst, svarsruta, omnämnanden, översikt */
+.pill.ny { background: #ffd8a8; font-weight: 600; }
+.pill.fast { background: #e1ecff; }
+.svarsruta { border: 1px solid #2da44e; border-left-width: 4px; border-radius: 6px; padding: 0.4rem 0.8rem; margin: 0.8rem 0; }
+.svarsruta ul { margin: 0.3rem 0; }
+.svarsruta li { border: 0; padding: 0.1rem 0; }
+kbd { border: 1px solid #bbb; border-bottom-width: 2px; border-radius: 4px; padding: 0 0.3rem; font-size: 0.85em; }
+ul.forslag { position: relative; margin: 0; padding: 0; border: 1px solid #bbb; border-radius: 6px; background: #fff; max-width: 22rem; }
+ul.forslag li { border: 0; padding: 0.3rem 0.6rem; cursor: pointer; }
+ul.forslag li.vald { background: #dbe8ff; }
+.stapelrad { display: grid; grid-template-columns: 11rem 1fr 7rem; align-items: center; gap: 0.5rem; margin: 0.2rem 0; font-size: 0.9rem; }
+.stapel { background: #eee; border-radius: 4px; height: 0.8rem; overflow: hidden; }
+.stapel span { display: block; height: 100%; background: #0b5fff; }
+#oversikt-innehall section { margin-bottom: 1rem; }
+@media (max-width: 30rem) { .stapelrad { grid-template-columns: 7rem 1fr 5.5rem; } }
+
+@media (prefers-color-scheme: dark) {
+  .pill.ny { background: #6b4a12; }
+  .pill.fast { background: #1c3566; }
+  kbd { border-color: #3a404b; }
+  ul.forslag { background: #1a1d24; border-color: #3a404b; }
+  ul.forslag li.vald { background: #1c3566; }
+  .stapel { background: #2a2f38; }
+  .stapel span { background: #7aa7ff; }
+}

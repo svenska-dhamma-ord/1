@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Diskussioner</title>
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <main>
@@ -18,6 +18,7 @@
     <nav id="typ-val" aria-label="Typ">
       <a href="#r/1" data-typ="d">Diskussioner</a>
       <a href="#r/1/i" data-typ="i">Ärenden</a>
+      <a href="#r/1/o" data-typ="o">Översikt</a>
     </nav>
 
     <div id="inloggning">
@@ -82,6 +83,8 @@
       </details>
       <div class="atgarder" id="uppdatera-rad-lista" hidden>
         <button type="button" id="uppdatera-lista">Uppdatera</button>
+        <button type="button" id="markera-lasta">Markera allt som läst</button>
+        <button type="button" id="exportera-allt" hidden>Säkerhetskopia (JSON)</button>
         <span class="tid" id="hamtad-lista"></span>
       </div>
       <p class="status" id="status">Hämtar diskussioner…</p>
@@ -107,6 +110,7 @@
       <div class="atgarder">
         <a id="oppna-github" href="#" target="_blank" rel="noopener noreferrer">Öppna på GitHub</a>
         <button type="button" id="kopiera-lank">Kopiera länk</button>
+        <button type="button" id="exportera-trad">Exportera tråd (Markdown)</button>
       </div>
       <p class="status" id="hjalptext"></p>
 
@@ -121,7 +125,14 @@
       </form>
       <p class="status" id="atgard-status"></p>
 
+      <div class="svarsruta" id="detalj-svar" hidden></div>
       <h3>Kommentarer</h3>
+      <label class="rad">Ordning
+        <select id="kommentar-ordning">
+          <option value="aldst">Äldst först</option>
+          <option value="nyast">Nyast först</option>
+        </select>
+      </label>
       <ul id="detalj-kommentarer"></ul>
       <button type="button" id="kommentarer-fler" hidden>Visa fler kommentarer</button>
 
@@ -146,6 +157,23 @@
         <pre id="behorigheter"></pre>
       </details>
     </section>
+
+    <section id="vy-oversikt" hidden>
+      <div class="atgarder">
+        <button type="button" id="oversikt-uppdatera">Uppdatera</button>
+      </div>
+      <p class="status" id="oversikt-status"></p>
+      <div id="oversikt-innehall"></div>
+    </section>
+
+    <div id="genvagar" class="svarsruta" hidden>
+      <strong>Tangentbord</strong>
+      <ul>
+        <li><kbd>/</kbd> sök i listan</li>
+        <li><kbd>u</kbd> uppdatera</li>
+        <li><kbd>?</kbd> visa eller dölj den här rutan, <kbd>Esc</kbd> stänger</li>
+      </ul>
+    </div>
 
     <section id="vy-arenden" hidden>
       <p id="arenden-logga-in" class="status" hidden>Logga in för att se och skriva ärenden.</p>
@@ -221,7 +249,8 @@
       </details>
     </section>
   </main>
-  <script src="arenden.js?v=1"></script>
-  <script src="script.js?v=13"></script>
+  <script src="arenden.js?v=2"></script>
+  <script src="extra.js?v=1"></script>
+  <script src="script.js?v=14"></script>
 </body>
 </html>
