@@ -234,6 +234,7 @@ function arendeKommentarRad(k) {
     rad.append(bekraftaKnapp("Radera", () => anropa(`/issue-comments/${encodeURIComponent(k.id)}`, "DELETE", undefined, efter)));
   }
   rad.append(knapp("Länk", () => kopieraLank(arendeLank(arendeNr, k.id), $("arende-status"))));
+  rad.append(knapp("Citera", () => citera($("arende-kommentar-text"), k.author?.login, k.body)));
   const marke = redigeratMarke(k, k.id);
   li.append(meta);
   if (marke) li.append(marke);

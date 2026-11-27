@@ -202,29 +202,77 @@ li.markerad { background: #fff8c5; }
 .atgarder a { align-self: center; font-size: 0.9rem; }
 
 @media (prefers-color-scheme: dark) {
-  body { background: #0f1115; color: #e6e6e6; }
-  .status, .meta, .tid, h1 small { color: #a0a4ab; }
-  .status.error { color: #ff7b8a; }
-  li, form, #repo-val a { border-color: #2c313a; }
-  li a, #repo-val a, .atgarder a { color: #7aa7ff; }
-  #repo-val a.aktiv { background: #2f6bff; color: #fff; border-color: #2f6bff; }
-  input, textarea, select, button {
+:root:not([data-tema="ljus"]) body { background: #0f1115; color: #e6e6e6; }
+:root:not([data-tema="ljus"]) .status,
+:root:not([data-tema="ljus"]) .meta,
+:root:not([data-tema="ljus"]) .tid,
+:root:not([data-tema="ljus"]) h1 small { color: #a0a4ab; }
+:root:not([data-tema="ljus"]) .status.error { color: #ff7b8a; }
+:root:not([data-tema="ljus"]) li,
+:root:not([data-tema="ljus"]) form,
+:root:not([data-tema="ljus"]) #repo-val a { border-color: #2c313a; }
+:root:not([data-tema="ljus"]) li a,
+:root:not([data-tema="ljus"]) #repo-val a,
+:root:not([data-tema="ljus"]) .atgarder a { color: #7aa7ff; }
+:root:not([data-tema="ljus"]) #repo-val a.aktiv { background: #2f6bff; color: #fff; border-color: #2f6bff; }
+:root:not([data-tema="ljus"]) input,
+:root:not([data-tema="ljus"]) textarea,
+:root:not([data-tema="ljus"]) select,
+:root:not([data-tema="ljus"]) button {
     background: #1a1d24;
     color: #e6e6e6;
     border: 1px solid #3a404b;
   }
-  .pill { background: #2a2f38; color: #e6e6e6; }
-  .pill.beslut { background: #3d5a1c; }
-  .pill.svar { background: #1d4d2c; }
-  .pill.stangd { background: #3d2f66; }
-  .pill.last { background: #5a4116; }
-  #behorigheter, .markdown pre, .markdown code { background: #1a1d24; }
-  .markdown blockquote { border-color: #3a404b; color: #b0b4bb; }
-  .markdown th, .markdown td { border-color: #3a404b; }
-  .reaktioner button { border-color: #3a404b; }
-  .reaktioner button.aktiv { background: #1c3566; border-color: #2f6bff; }
-  li.markerad { background: #3a3414; }
+:root:not([data-tema="ljus"]) .pill { background: #2a2f38; color: #e6e6e6; }
+:root:not([data-tema="ljus"]) .pill.beslut { background: #3d5a1c; }
+:root:not([data-tema="ljus"]) .pill.svar { background: #1d4d2c; }
+:root:not([data-tema="ljus"]) .pill.stangd { background: #3d2f66; }
+:root:not([data-tema="ljus"]) .pill.last { background: #5a4116; }
+:root:not([data-tema="ljus"]) #behorigheter,
+:root:not([data-tema="ljus"]) .markdown pre,
+:root:not([data-tema="ljus"]) .markdown code { background: #1a1d24; }
+:root:not([data-tema="ljus"]) .markdown blockquote { border-color: #3a404b; color: #b0b4bb; }
+:root:not([data-tema="ljus"]) .markdown th,
+:root:not([data-tema="ljus"]) .markdown td { border-color: #3a404b; }
+:root:not([data-tema="ljus"]) .reaktioner button { border-color: #3a404b; }
+:root:not([data-tema="ljus"]) .reaktioner button.aktiv { background: #1c3566; border-color: #2f6bff; }
+:root:not([data-tema="ljus"]) li.markerad { background: #3a3414; }
 }
+:root[data-tema="mork"] body { background: #0f1115; color: #e6e6e6; }
+:root[data-tema="mork"] .status,
+:root[data-tema="mork"] .meta,
+:root[data-tema="mork"] .tid,
+:root[data-tema="mork"] h1 small { color: #a0a4ab; }
+:root[data-tema="mork"] .status.error { color: #ff7b8a; }
+:root[data-tema="mork"] li,
+:root[data-tema="mork"] form,
+:root[data-tema="mork"] #repo-val a { border-color: #2c313a; }
+:root[data-tema="mork"] li a,
+:root[data-tema="mork"] #repo-val a,
+:root[data-tema="mork"] .atgarder a { color: #7aa7ff; }
+:root[data-tema="mork"] #repo-val a.aktiv { background: #2f6bff; color: #fff; border-color: #2f6bff; }
+:root[data-tema="mork"] input,
+:root[data-tema="mork"] textarea,
+:root[data-tema="mork"] select,
+:root[data-tema="mork"] button {
+    background: #1a1d24;
+    color: #e6e6e6;
+    border: 1px solid #3a404b;
+  }
+:root[data-tema="mork"] .pill { background: #2a2f38; color: #e6e6e6; }
+:root[data-tema="mork"] .pill.beslut { background: #3d5a1c; }
+:root[data-tema="mork"] .pill.svar { background: #1d4d2c; }
+:root[data-tema="mork"] .pill.stangd { background: #3d2f66; }
+:root[data-tema="mork"] .pill.last { background: #5a4116; }
+:root[data-tema="mork"] #behorigheter,
+:root[data-tema="mork"] .markdown pre,
+:root[data-tema="mork"] .markdown code { background: #1a1d24; }
+:root[data-tema="mork"] .markdown blockquote { border-color: #3a404b; color: #b0b4bb; }
+:root[data-tema="mork"] .markdown th,
+:root[data-tema="mork"] .markdown td { border-color: #3a404b; }
+:root[data-tema="mork"] .reaktioner button { border-color: #3a404b; }
+:root[data-tema="mork"] .reaktioner button.aktiv { background: #1c3566; border-color: #2f6bff; }
+:root[data-tema="mork"] li.markerad { background: #3a3414; }
 
 /* ärenden, historik, förhandsvisning, flikar */
 #typ-val { display: flex; gap: 0.5rem; margin: 0.5rem 0; }
@@ -246,12 +294,17 @@ label.rad { flex-direction: row; align-items: center; gap: 0.4rem; }
 button[aria-pressed="true"].aktiv { background: #dbe8ff; border-color: #0b5fff; }
 
 @media (prefers-color-scheme: dark) {
-  #typ-val a { color: #7aa7ff; }
-  #typ-val a.aktiv { border-bottom-color: #7aa7ff; }
-  .forhandsvisning { border-color: #3a404b; }
-  .historik pre { background: #1a1d24; }
-  button[aria-pressed="true"].aktiv { background: #1c3566; border-color: #2f6bff; }
+:root:not([data-tema="ljus"]) #typ-val a { color: #7aa7ff; }
+:root:not([data-tema="ljus"]) #typ-val a.aktiv { border-bottom-color: #7aa7ff; }
+:root:not([data-tema="ljus"]) .forhandsvisning { border-color: #3a404b; }
+:root:not([data-tema="ljus"]) .historik pre { background: #1a1d24; }
+:root:not([data-tema="ljus"]) button[aria-pressed="true"].aktiv { background: #1c3566; border-color: #2f6bff; }
 }
+:root[data-tema="mork"] #typ-val a { color: #7aa7ff; }
+:root[data-tema="mork"] #typ-val a.aktiv { border-bottom-color: #7aa7ff; }
+:root[data-tema="mork"] .forhandsvisning { border-color: #3a404b; }
+:root[data-tema="mork"] .historik pre { background: #1a1d24; }
+:root[data-tema="mork"] button[aria-pressed="true"].aktiv { background: #1c3566; border-color: #2f6bff; }
 
 /* nytt, fäst, svarsruta, omnämnanden, översikt */
 .pill.ny { background: #ffd8a8; font-weight: 600; }
@@ -270,18 +323,38 @@ ul.forslag li.vald { background: #dbe8ff; }
 @media (max-width: 30rem) { .stapelrad { grid-template-columns: 7rem 1fr 5.5rem; } }
 
 @media (prefers-color-scheme: dark) {
-  .pill.ny { background: #6b4a12; }
-  .pill.fast { background: #1c3566; }
-  kbd { border-color: #3a404b; }
-  ul.forslag { background: #1a1d24; border-color: #3a404b; }
-  ul.forslag li.vald { background: #1c3566; }
-  .stapel { background: #2a2f38; }
-  .stapel span { background: #7aa7ff; }
+:root:not([data-tema="ljus"]) .pill.ny { background: #6b4a12; }
+:root:not([data-tema="ljus"]) .pill.fast { background: #1c3566; }
+:root:not([data-tema="ljus"]) kbd { border-color: #3a404b; }
+:root:not([data-tema="ljus"]) ul.forslag { background: #1a1d24; border-color: #3a404b; }
+:root:not([data-tema="ljus"]) ul.forslag li.vald { background: #1c3566; }
+:root:not([data-tema="ljus"]) .stapel { background: #2a2f38; }
+:root:not([data-tema="ljus"]) .stapel span { background: #7aa7ff; }
 }
+:root[data-tema="mork"] .pill.ny { background: #6b4a12; }
+:root[data-tema="mork"] .pill.fast { background: #1c3566; }
+:root[data-tema="mork"] kbd { border-color: #3a404b; }
+:root[data-tema="mork"] ul.forslag { background: #1a1d24; border-color: #3a404b; }
+:root[data-tema="mork"] ul.forslag li.vald { background: #1c3566; }
+:root[data-tema="mork"] .stapel { background: #2a2f38; }
+:root[data-tema="mork"] .stapel span { background: #7aa7ff; }
 
 /* omröstning, banderoll */
 .valrad { display: grid; grid-template-columns: minmax(6rem, 12rem) 1fr 7rem; gap: 0.5rem; align-items: center; margin: 0.3rem 0; }
 .valrad button.aktiv { background: #dbe8ff; border-color: #0b5fff; }
 #detalj-banner, #arende-banner { font-weight: 600; }
 @media (max-width: 30rem) { .valrad { grid-template-columns: 1fr 5rem; } .valrad .stapel { grid-column: 1 / -1; order: 3; } }
-@media (prefers-color-scheme: dark) { .valrad button.aktiv { background: #1c3566; border-color: #2f6bff; } }
+@media (prefers-color-scheme: dark) {
+:root:not([data-tema="ljus"]) .valrad button.aktiv { background: #1c3566; border-color: #2f6bff; }
+}
+:root[data-tema="mork"] .valrad button.aktiv { background: #1c3566; border-color: #2f6bff; }
+
+/* textverktyg, tema, vik, utskrift */
+.verktyg { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.verktyg button { padding: 0.1rem 0.5rem; min-width: 2rem; }
+button.vik { margin-left: auto; }
+#tema-knapp { float: right; }
+@media print {
+  nav, form, details, button, .atgarder, #genvagar, #tema-knapp, .reaktioner, #filter-ruta { display: none !important; }
+  body { max-width: none; color: #000; background: #fff; }
+}

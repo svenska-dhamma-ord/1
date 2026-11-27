@@ -337,6 +337,7 @@ async function kopieraLank(text, statusEl) {
 function medForhandsvisning(textarea) {
   if (!textarea || textarea.dataset.forhand) return;
   textarea.dataset.forhand = "1";
+  medVerktyg(textarea);
   const ruta = document.createElement("div");
   ruta.className = "markdown forhandsvisning";
   ruta.hidden = true;
@@ -861,6 +862,12 @@ function byggKommentarer(d, fler = false) {
       for (const s of svar) sub.append(kommentarRad(s, false, k.id));
       li.append(sub);
       laggTillFlerSvar(li, sub, k);
+      const vik = knapp(`Dölj svar (${k.replies.totalCount ?? svar.length})`, () => {
+        const dold = sub.hidden = !sub.hidden;
+        vik.textContent = dold ? `Visa svar (${k.replies.totalCount ?? svar.length})` : `Dölj svar (${k.replies.totalCount ?? svar.length})`;
+      });
+      vik.className = "liten vik";
+      li.querySelector(".atgarder")?.append(vik);
     }
     ul.append(li);
   }
@@ -928,6 +935,9 @@ function kommentarRad(k, toppniva, foralderId) {
     rad.append(
       knapp("Svara", () => svaraPaKommentar(foralderId ?? k.id, k.author?.login))
     );
+  }
+  if (hamtaToken() && tokenRackerForRepo() && !k.deletedAt) {
+    rad.append(knapp("Citera", () => citera($("kommentar-text"), k.author?.login, k.body)));
   }
   if (k.viewerCanMarkAsAnswer && !k.isAnswer) {
     rad.append(knapp("Markera som svar", () => kommentarAtgard(k.id, "answer")));
@@ -1152,21 +1162,29 @@ function markeraTyp(typ) {
   }
 }
 
+// Filter och sökning ligger i adressen efter ?, till exempel #r/1?q=ord&status=open.
+function hashUtanFraga() {
+  return location.hash.split("?")[0];
+}
+function hashFraga() {
+  return new URLSearchParams(location.hash.includes("?") ? location.hash.split("?")[1] : "");
+}
+
 function lasRoute() {
   // #r/<repo>            lista
   // #r/<repo>/d/<n>      detalj
   // #d/<n>               (gammal form, standardrepot)
-  let m = location.hash.match(/^#r\/([\w-]+)\/o$/);
+  let m = hashUtanFraga().match(/^#r\/([\w-]+)\/o$/);
   if (m && REPON[m[1]]) return { repo: m[1], typ: "o", nummer: null, kommentar: null };
-  m = location.hash.match(/^#r\/([\w-]+)\/i(?:\/(\d+)(?:\/c\/([\w-]+))?)?$/);
+  m = hashUtanFraga().match(/^#r\/([\w-]+)\/i(?:\/(\d+)(?:\/c\/([\w-]+))?)?$/);
   if (m && REPON[m[1]]) {
     return { repo: m[1], typ: "i", nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
   }
-  m = location.hash.match(/^#r\/([\w-]+)(?:\/d\/(\d+)(?:\/c\/([\w-]+))?)?$/);
+  m = hashUtanFraga().match(/^#r\/([\w-]+)(?:\/d\/(\d+)(?:\/c\/([\w-]+))?)?$/);
   if (m && REPON[m[1]]) {
     return { repo: m[1], typ: "d", nummer: m[2] ? Number(m[2]) : null, kommentar: m[3] ?? null };
   }
-  m = location.hash.match(/^#d\/(\d+)$/);
+  m = hashUtanFraga().match(/^#d\/(\d+)$/);
   if (m) return { repo: STANDARD_REPO, typ: "d", nummer: Number(m[1]) };
   return { repo: repo, typ: "d", nummer: null };
 }
@@ -1195,8 +1213,44 @@ async function hanteraRoutning() {
   } else {
     visaListVy();
     hamtaKategorier();
+    await tillampaFilterFranAdress();
     hamtaDiskussioner();
   }
+}
+
+function filterTillAdress() {
+  const p = new URLSearchParams();
+  if (filter.q) p.set("q", filter.q);
+  if (filter.mina) p.set("mina", "1");
+  if (filter.kategori) p.set("kat", filter.kategori);
+  if (filter.status) p.set("status", filter.status);
+  if (filter.sort) p.set("sort", filter.sort);
+  if (filter.obesvarade) p.set("obes", "1");
+  const q = p.toString();
+  return `#r/${repo}${q ? `?${q}` : ""}`;
+}
+
+async function tillampaFilterFranAdress() {
+  const p = hashFraga();
+  const harFilter = [...p.keys()].length > 0;
+  nollstallFilter();
+  if (!harFilter) return;
+  $("filter-ruta").open = true;
+  if (p.get("kat")) await fyllFilterKategorier();
+  $("sok-text").value = p.get("q") ?? "";
+  $("filter-kategori").value = p.get("kat") ?? "";
+  $("filter-status").value = p.get("status") ?? "";
+  $("filter-sort").value = p.get("sort") ?? "";
+  $("filter-obesvarade").checked = p.get("obes") === "1";
+  lasFilter();
+  filter.mina = p.get("mina") === "1";
+}
+
+// Sätter adressen efter filtret. Är den redan lika hämtas listan direkt, annars gör hashchange det.
+function valjFilter() {
+  const mal = filterTillAdress();
+  if (location.hash === mal) hamtaDiskussioner();
+  else location.hash = mal;
 }
 
 function init() {
@@ -1229,16 +1283,16 @@ function init() {
   $("filter-formular").addEventListener("submit", (e) => {
     e.preventDefault();
     lasFilter();
-    hamtaDiskussioner();
+    valjFilter();
   });
   $("filter-rensa").addEventListener("click", () => {
     nollstallFilter();
-    hamtaDiskussioner();
+    valjFilter();
   });
   $("filter-mina").addEventListener("click", () => {
     nollstallFilter();
     filter.mina = true;
-    hamtaDiskussioner();
+    valjFilter();
   });
   $("kopiera-lank").addEventListener("click", () =>
     kopieraLank(trådLank(aktuelltNummer), $("detalj-status"))

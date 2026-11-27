@@ -280,6 +280,7 @@ async function visaOversikt() {
 // ------------------------------------------------------------ tangentbord och skärmläsare
 
 function initExtra() {
+  for (const id of ["ny-text", "kommentar-text", "redigera-text", "arende-ny-text", "arende-kommentar-text", "arende-redigera-text"]) medVerktyg($(id));
   for (const el of document.querySelectorAll(".status")) {
     el.setAttribute("role", "status");
     el.setAttribute("aria-live", "polite");
@@ -412,3 +413,93 @@ async function skapaArendeFranTrad() {
     sattStatus(status, `Kunde inte skapa ärendet: ${fel.message}`, true);
   }
 }
+
+// ------------------------------------------------------------ textverktyg
+
+function infogaOmkring(ta, fore, efter, plats) {
+  const a = ta.selectionStart;
+  const b = ta.selectionEnd;
+  const valt = ta.value.slice(a, b) || plats;
+  ta.setRangeText(`${fore}${valt}${efter}`, a, b, "end");
+  ta.setSelectionRange(a + fore.length, a + fore.length + valt.length);
+  ta.dispatchEvent(new Event("input"));
+  ta.focus();
+}
+
+function prefixRader(ta, prefix, numrerad = false) {
+  const text = ta.value;
+  const a = text.lastIndexOf("\n", ta.selectionStart - 1) + 1;
+  let b = text.indexOf("\n", ta.selectionEnd);
+  if (b < 0) b = text.length;
+  const rader = text.slice(a, b).split("\n");
+  const ny = rader.map((r, i) => (numrerad ? `${i + 1}. ` : prefix) + r).join("\n");
+  ta.setRangeText(ny, a, b, "select");
+  ta.dispatchEvent(new Event("input"));
+  ta.focus();
+}
+
+// Knappar för Markdown ovanför en textruta, och Ctrl+Enter för att skicka.
+function medVerktyg(ta) {
+  if (!ta || ta.dataset.verktyg) return;
+  ta.dataset.verktyg = "1";
+  const rad = document.createElement("div");
+  rad.className = "verktyg";
+  rad.setAttribute("role", "toolbar");
+  rad.setAttribute("aria-label", "Formatering");
+  const k = (text, titel, fn) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.title = titel;
+    b.setAttribute("aria-label", titel);
+    b.addEventListener("mousedown", (ev) => ev.preventDefault());
+    b.addEventListener("click", fn);
+    rad.append(b);
+  };
+  k("B", "Fet", () => infogaOmkring(ta, "**", "**", "fet"));
+  k("i", "Kursiv", () => infogaOmkring(ta, "*", "*", "kursiv"));
+  k("</>", "Kod", () => (/\n/.test(ta.value.slice(ta.selectionStart, ta.selectionEnd)) ? infogaOmkring(ta, "```\n", "\n```", "kod") : infogaOmkring(ta, "`", "`", "kod")));
+  k("🔗", "Länk", () => infogaOmkring(ta, "[", "](https://)", "länktext"));
+  k("•", "Punktlista", () => prefixRader(ta, "- "));
+  k("1.", "Numrerad lista", () => prefixRader(ta, "", true));
+  k("❝", "Citat", () => prefixRader(ta, "> "));
+  k("H", "Rubrik", () => prefixRader(ta, "### "));
+  ta.before(rad);
+  ta.addEventListener("keydown", (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter" && ta.form) {
+      ev.preventDefault();
+      ta.form.requestSubmit();
+    }
+  });
+}
+
+// Citera en kommentar i kommentarsrutan: "@namn skrev:" och texten som citat.
+function citera(ta, forfattare, text) {
+  if (!ta) return;
+  const citat = (text ?? "").split("\n").map((r) => `> ${r}`).join("\n");
+  const fore = ta.value && !ta.value.endsWith("\n\n") ? "\n\n" : "";
+  ta.value += `${fore}${forfattare ? `@${forfattare} skrev:\n\n` : ""}${citat}\n\n`;
+  ta.dispatchEvent(new Event("input"));
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  ta.scrollIntoView({ block: "center" });
+}
+
+// ------------------------------------------------------------ tema
+
+function tillampaTema(val) {
+  if (val === "mork" || val === "ljus") document.documentElement.dataset.tema = val;
+  else delete document.documentElement.dataset.tema;
+  const kn = document.getElementById("tema-knapp");
+  if (kn) kn.textContent = val === "mork" ? "🌙 Mörkt" : val === "ljus" ? "☀️ Ljust" : "🌓 Automatiskt";
+}
+function initTema() {
+  tillampaTema(lagraLas("sdo-tema"));
+  document.getElementById("tema-knapp")?.addEventListener("click", () => {
+    const nu = lagraLas("sdo-tema");
+    const nasta = nu === "mork" ? "ljus" : nu === "ljus" ? null : "mork";
+    lagraSkriv("sdo-tema", nasta);
+    tillampaTema(nasta);
+  });
+}
+initTema();
