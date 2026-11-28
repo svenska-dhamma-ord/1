@@ -102,6 +102,8 @@ async function visaOrd(key) {
   $("ord-ny-formular").hidden = true;
   $("ord-ny-knapp").hidden = !tokenRackerForRepo();
   $("ord-ny-knapp").dataset.key = key;
+  hamtaForifyllt();
+  tillampaForifyllt();
   if (REPON[repo].privat && !tokenRackerForRepo()) {
     sattStatus(status, "Logga in för att läsa det privata repot.");
     return;
@@ -348,6 +350,7 @@ function initOrd() {
       $("ord-ny-text").value = "";
       $("ord-forslag-text").value = "";
       $("ord-ny-formular").hidden = true;
+      sessionStorage.removeItem("ny_forslag");
       sattStatus(status, "");
       await visaOrd(key);
     } catch (fel) {
@@ -432,4 +435,53 @@ function beslutsBlankett(t, d, anteckning) {
   pre.textContent = beslutsText(t, d, anteckning);
   det.append(sum, pre);
   return det;
+}
+
+// ------------------------------------------------------------ förifyllt förslag från SDO-sidan
+// Ordsidan på SDO kontrollerar förslaget och öppnar den här sidan med ?ny=<json>. Det sparas i sessionen
+// (inloggningen skickar tillbaka dig utan frågeparametrar) och fyller formuläret när du är inloggad.
+
+function hamtaForifyllt() {
+  const rad = hashFraga().get("ny");
+  if (!rad) return;
+  try {
+    const d = JSON.parse(rad);
+    if (typeof d?.forslag !== "string" || d.forslag.length > 80) return;
+    const rent = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
+    sessionStorage.setItem("ny_forslag", JSON.stringify({
+      titel: rent(d.titel, 120), forslag: rent(d.forslag, 80), niva: rent(d.niva, 30), betydelse: rent(d.betydelse, 80), varfor: rent(d.varfor, 2000),
+    }));
+  } catch {
+    /* ogiltigt värde ignoreras */
+  }
+  history.replaceState(null, "", location.pathname + location.search + hashUtanFraga());
+}
+
+function tillampaForifyllt() {
+  let d = null;
+  try {
+    d = JSON.parse(sessionStorage.getItem("ny_forslag") ?? "null");
+  } catch {
+    d = null;
+  }
+  if (!d) return;
+  const notis = $("ord-forifyllt");
+  notis.hidden = true;
+  if (!tokenRackerForRepo()) {
+    notis.hidden = false;
+    notis.textContent = `Ditt förslag ”${d.forslag}” är förberett. Logga in med GitHub för att skicka det. Det finns kvar i den här fliken tills du skickat eller laddat om, men efter inloggningen öppnar du ordet igen.`;
+    return;
+  }
+  $("ord-ny-formular").hidden = false;
+  $("ord-ny-titel").value = d.titel;
+  $("ord-forslag-kryss").checked = true;
+  $("ord-forslag-falt").hidden = false;
+  $("ord-forslag-text").required = true;
+  $("ord-forslag-text").value = d.forslag;
+  const rader = [];
+  if (d.niva) rader.push(`**Nivå:** ${d.niva}`);
+  if (d.betydelse) rader.push(`**Betydelse:** ${d.betydelse}`);
+  $("ord-ny-text").value = [...rader, d.varfor ? `\n**Varför:** ${d.varfor}` : ""].join("\n").trim() || d.forslag;
+  sattStatus($("ord-ny-status"), "Förifyllt från SDO-sidan. Granska och tryck Skapa tråd.");
+  $("ord-ny-formular").scrollIntoView({ block: "center" });
 }

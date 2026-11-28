@@ -1,4 +1,16 @@
-const WORKER_URL = "https://sdo-diskussioner.svenska-dhamma-ord.workers.dev";
+// Kopia för GitHub App-inloggning (prototyp). Worker-adressen kan åsidosättas på localhost med ?worker=http://localhost:8787
+const WORKER_URL = (() => {
+  // ?worker= på localhost sparas i sessionen, eftersom GitHub skickar tillbaka dig utan frågeparametrarna efter inloggningen.
+  try {
+    const w = new URLSearchParams(location.search).get("worker");
+    if (w && /^http:\/\/localhost:\d+$/.test(w) && location.hostname === "localhost") sessionStorage.setItem("worker_url", w);
+    const sparad = sessionStorage.getItem("worker_url");
+    if (sparad && /^http:\/\/localhost:\d+$/.test(sparad) && location.hostname === "localhost") return sparad;
+  } catch {
+    /* sessionStorage kan saknas */
+  }
+  return "https://sdo-diskussioner-app.svenska-dhamma-ord.workers.dev";
+})();
 const REPON = { "1": { privat: false }, "1-privat": { privat: true } };
 const STANDARD_REPO = "1";
 const WRITE_ELLER_HOGRE = ["WRITE", "MAINTAIN", "ADMIN"];
@@ -19,18 +31,57 @@ function hamtaToken() {
 function hamtaScope() {
   return (sessionStorage.getItem("github_scope") ?? "").split(/[,\s]+/).filter(Boolean);
 }
-function sparaToken(token, scope) {
+function sparaToken(token, scope, extra = {}) {
   sessionStorage.setItem("github_token", token);
   sessionStorage.setItem("github_scope", scope ?? "");
+  // GitHub App: token gäller 8 timmar och förnyas med förnyelsetoken (som byts vid varje förnyelse).
+  for (const [k, v] of Object.entries({ github_refresh: extra.refresh, github_expires: extra.expires })) {
+    if (v) sessionStorage.setItem(k, v);
+    else sessionStorage.removeItem(k);
+  }
 }
 function rensaToken() {
-  sessionStorage.removeItem("github_token");
-  sessionStorage.removeItem("github_scope");
+  for (const k of ["github_token", "github_scope", "github_refresh", "github_expires"]) sessionStorage.removeItem(k);
 }
-// Privata repon kräver scopet "repo". public_repo räcker inte.
+// App-token (scope "app") har inga scope: behörigheten kommer från appen och användarens roll.
+function arAppToken() {
+  return hamtaScope().includes("app");
+}
+// OAuth: privata repon kräver scopet "repo", public_repo räcker inte. App-token duger för båda repona.
 function tokenRackerForRepo() {
   if (!hamtaToken()) return false;
-  return REPON[repo].privat ? hamtaScope().includes("repo") : true;
+  return REPON[repo].privat ? arAppToken() || hamtaScope().includes("repo") : true;
+}
+
+// Förnyar App-token strax innan den går ut, eller efter ett 401. Bara en förnyelse åt gången.
+let pagaendeFornyelse = null;
+async function fornyaToken() {
+  const refresh = sessionStorage.getItem("github_refresh");
+  if (!refresh) return false;
+  if (!pagaendeFornyelse) {
+    pagaendeFornyelse = (async () => {
+      try {
+        const svar = await fetch(`${WORKER_URL}/refresh?repo=${encodeURIComponent(repo)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+        const d = await svar.json();
+        if (!svar.ok || !d.token) return false;
+        sparaToken(d.token, "app", { refresh: d.refresh, expires: String(d.expires) });
+        return true;
+      } catch {
+        return false;
+      } finally {
+        pagaendeFornyelse = null;
+      }
+    })();
+  }
+  return pagaendeFornyelse;
+}
+function tokenGarUtSnart() {
+  const t = Number(sessionStorage.getItem("github_expires"));
+  return t > 0 && t - Date.now() < 120000;
 }
 
 function lasTokenFranUrl() {
@@ -41,12 +92,19 @@ function lasTokenFranUrl() {
     token: params.get("token"),
     scope: params.get("scope"),
     repo: params.get("repo"),
+    refresh: params.get("refresh"),
+    expires: params.get("expires"),
   };
 }
 
 // ------------------------------------------------------------ API
 
-async function api(sokvag, { method = "GET", body, inloggad = false } = {}) {
+async function sakraToken() {
+  if (hamtaToken() && sessionStorage.getItem("github_refresh") && tokenGarUtSnart()) await fornyaToken();
+}
+
+async function api(sokvag, { method = "GET", body, inloggad = false, omforsok = false } = {}) {
+  await sakraToken();
   const url = new URL(WORKER_URL + sokvag);
   url.searchParams.set("repo", repo);
   const headers = {};
@@ -68,6 +126,10 @@ async function api(sokvag, { method = "GET", body, inloggad = false } = {}) {
     /* tomt svar */
   }
   if (svar.status === 401 && hamtaToken()) {
+    // En App-token som gått ut förnyas en gång och förfrågan görs om. Annars loggas besökaren ut.
+    if (!omforsok && (await fornyaToken())) {
+      return api(sokvag, { method, body, inloggad, omforsok: true });
+    }
     rensaToken();
     uppdateraInloggning();
   }
@@ -112,9 +174,13 @@ async function uppdateraInloggning() {
 
   if (harNagonToken) {
     try {
-      const svar = await fetch("https://api.github.com/user", {
+      await sakraToken();
+      let svar = await fetch("https://api.github.com/user", {
         headers: { Authorization: `Bearer ${hamtaToken()}` },
       });
+      if (svar.status === 401 && (await fornyaToken())) {
+        svar = await fetch("https://api.github.com/user", { headers: { Authorization: `Bearer ${hamtaToken()}` } });
+      }
       if (!svar.ok) throw new Error("ogiltig token");
       $("inloggad-som").textContent = (await svar.json()).login;
     } catch {
@@ -369,6 +435,7 @@ function medForhandsvisning(textarea) {
 }
 
 function upprostaKnapp(id, antal, harUpprostat, kan) {
+  if (arAppToken()) kan = false; // GitHub Apps kan inte upprösta (provat 28 november): bara räknaren visas
   if (!kan && !antal) return null;
   let n = antal ?? 0;
   let har = Boolean(harUpprostat);
@@ -445,7 +512,7 @@ function redigeratMarke(objekt, id) {
 // (provat 27 november). Inloggningen mot det publika repot ger bara public_repo, så knapparna
 // visas först när man loggat in via det privata repot.
 function kanDolja() {
-  return hamtaScope().includes("repo");
+  return arAppToken() || hamtaScope().includes("repo");
 }
 
 const DOLJ_ORSAKER = [
@@ -1266,7 +1333,7 @@ function valjFilter() {
 function init() {
   const franUrl = lasTokenFranUrl();
   if (franUrl?.token) {
-    sparaToken(franUrl.token, franUrl.scope);
+    sparaToken(franUrl.token, franUrl.scope, { refresh: franUrl.refresh, expires: franUrl.expires });
     const mal = REPON[franUrl.repo] ? franUrl.repo : STANDARD_REPO;
     history.replaceState(null, "", `${location.pathname}${location.search}#r/${mal}`);
   }
