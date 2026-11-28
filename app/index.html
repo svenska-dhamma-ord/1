@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diskussioner</title>
+  <link rel="stylesheet" href="style.css?v=14">
+</head>
+<body>
+  <a href="#huvud" class="hoppa" id="hoppa-lank">Hoppa till innehållet</a>
+  <main id="huvud" tabindex="-1">
+    <h1>Diskussioner <small>(test, ingen riktig SDO-data)</small></h1>
+    <button type="button" id="tema-knapp" class="liten" title="Byt mellan automatiskt, mörkt och ljust läge">🌓 Automatiskt</button>
+
+    <nav id="repo-val" aria-label="Repo">
+      <a href="#r/1" data-repo="1">1 (publikt)</a>
+      <a href="#r/1-privat" data-repo="1-privat">1-privat (privat)</a>
+    </nav>
+
+    <nav id="typ-val" aria-label="Typ">
+      <a href="#r/1" data-typ="d">Diskussioner</a>
+      <a href="#r/1/i" data-typ="i">Ärenden</a>
+      <a href="#r/1/w" data-typ="w">Ord</a>
+      <a href="#r/1/o" data-typ="o">Översikt</a>
+    </nav>
+
+    <div id="inloggning">
+      <p id="inloggning-text" class="status"></p>
+      <button id="logga-in-knapp" type="button">Logga in med GitHub</button>
+    </div>
+
+    <p id="inloggad-rad" hidden>
+      Inloggad som <strong id="inloggad-som"></strong>
+      · roll i det här repot: <strong id="inloggad-roll">?</strong>
+      <button type="button" id="logga-ut-knapp">Logga ut</button>
+    </p>
+
+    <section id="vy-lista">
+      <form id="ny-diskussion-formular" hidden>
+        <label>
+          Kategori
+          <select id="ny-kategori" required></select>
+        </label>
+        <label>
+          Titel
+          <input type="text" id="ny-titel" required>
+        </label>
+        <label>
+          Text
+          <textarea id="ny-text" required></textarea>
+        </label>
+        <button type="submit">Skapa diskussion</button>
+        <p class="status" id="skapa-status"></p>
+      </form>
+
+      <details id="filter-ruta">
+        <summary>Filter och sök</summary>
+        <form id="filter-formular">
+          <label>Sök i titel och text
+            <input type="search" id="sok-text" maxlength="100" placeholder="ett eller flera ord">
+          </label>
+          <label>Kategori
+            <select id="filter-kategori"><option value="">Alla</option></select>
+          </label>
+          <label>Status
+            <select id="filter-status">
+              <option value="">Alla</option>
+              <option value="open">Öppna</option>
+              <option value="closed">Stängda</option>
+            </select>
+          </label>
+          <label>Sortera
+            <select id="filter-sort">
+              <option value="">Nyast först</option>
+              <option value="updated">Senast aktiv</option>
+            </select>
+          </label>
+          <label class="kryss"><input type="checkbox" id="filter-obesvarade"> Bara obesvarade frågor</label>
+          <div class="atgarder">
+            <button type="submit">Visa</button>
+            <button type="button" id="filter-rensa">Rensa</button>
+            <button type="button" id="filter-mina" hidden>Mina trådar</button>
+          </div>
+          <p class="status" id="filter-not">Vid sökning och Mina trådar används inte kategori, status och sortering (GitHub söker i hela repot, upp till 30 träffar).</p>
+        </form>
+      </details>
+      <div class="atgarder" id="uppdatera-rad-lista" hidden>
+        <button type="button" id="uppdatera-lista">Uppdatera</button>
+        <button type="button" id="markera-lasta">Markera allt som läst</button>
+        <button type="button" id="exportera-allt" hidden>Säkerhetskopia (JSON)</button>
+        <span class="tid" id="hamtad-lista"></span>
+      </div>
+      <p class="status" id="status">Hämtar diskussioner…</p>
+      <ul id="lista"></ul>
+      <button type="button" id="lista-fler" hidden>Visa fler diskussioner</button>
+    </section>
+
+    <section id="vy-detalj" hidden>
+      <div class="atgarder">
+        <button type="button" id="tillbaka-knapp">← Tillbaka</button>
+        <span id="uppdatera-rad-detalj" hidden>
+          <button type="button" id="uppdatera-detalj">Uppdatera</button>
+        </span>
+        <span class="tid" id="hamtad-detalj"></span>
+      </div>
+      <h2 id="detalj-titel"></h2>
+      <p class="meta" id="detalj-meta"></p>
+      <p class="pills" id="detalj-pills"></p>
+      <p class="status" id="detalj-banner" hidden></p>
+      <div id="detalj-text" class="markdown"></div>
+      <div id="detalj-redigerad"></div>
+      <div class="svarsruta" id="detalj-omrostning" hidden></div>
+      <div class="reaktioner" id="detalj-reaktioner"></div>
+      <div class="atgarder pills" id="detalj-labels"></div>
+      <div class="atgarder">
+        <a id="oppna-github" href="#" target="_blank" rel="noopener noreferrer">Öppna på GitHub</a>
+        <button type="button" id="kopiera-lank">Kopiera länk</button>
+        <button type="button" id="exportera-trad">Exportera tråd (Markdown)</button>
+        <button type="button" id="skapa-arende" hidden>Skapa ärende från tråden</button>
+      </div>
+      <p class="status" id="hjalptext"></p>
+
+      <div class="atgarder" id="detalj-atgarder"></div>
+      <form id="redigera-formular" hidden>
+        <label>Titel <input type="text" id="redigera-titel" required></label>
+        <label>Text <textarea id="redigera-text" required></textarea></label>
+        <div class="atgarder">
+          <button type="submit">Spara</button>
+          <button type="button" id="redigera-avbryt">Avbryt</button>
+        </div>
+      </form>
+      <p class="status" id="atgard-status"></p>
+
+      <div class="svarsruta" id="detalj-svar" hidden></div>
+      <h3>Kommentarer</h3>
+      <label class="rad">Ordning
+        <select id="kommentar-ordning">
+          <option value="aldst">Äldst först</option>
+          <option value="nyast">Nyast först</option>
+        </select>
+      </label>
+      <ul id="detalj-kommentarer"></ul>
+      <button type="button" id="kommentarer-fler" hidden>Visa fler kommentarer</button>
+
+      <form id="kommentar-formular" hidden>
+        <p id="svarar-pa" hidden>
+          Svarar på en kommentar
+          <button type="button" id="avbryt-svar-knapp">Avbryt</button>
+        </p>
+        <label>
+          Ny kommentar
+          <textarea id="kommentar-text" required></textarea>
+        </label>
+        <button type="submit">Skicka</button>
+      </form>
+      <p class="status" id="kommentar-status"></p>
+      <p id="logga-in-for-kommentar" class="status" hidden>Logga in för att kommentera.</p>
+
+      <p class="status" id="detalj-status"></p>
+
+      <details id="behorigheter-ruta">
+        <summary>Behörigheter enligt GitHub (för testet)</summary>
+        <pre id="behorigheter"></pre>
+      </details>
+    </section>
+
+    <section id="vy-oversikt" hidden>
+      <div class="atgarder">
+        <button type="button" id="oversikt-uppdatera">Uppdatera</button>
+      </div>
+      <p class="status" id="oversikt-status"></p>
+      <div id="oversikt-innehall"></div>
+    </section>
+
+    <div id="genvagar" class="svarsruta" hidden>
+      <strong>Tangentbord</strong>
+      <ul>
+        <li><kbd>/</kbd> sök i listan</li>
+        <li><kbd>u</kbd> uppdatera</li>
+        <li><kbd>?</kbd> visa eller dölj den här rutan, <kbd>Esc</kbd> stänger</li>
+      </ul>
+    </div>
+
+    <section id="vy-arenden" hidden>
+      <p id="arenden-logga-in" class="status" hidden>Logga in för att se och skriva ärenden.</p>
+      <div id="arenden-innehall" hidden>
+        <form id="nytt-arende-formular">
+          <label>Titel <input type="text" id="arende-ny-titel" required></label>
+          <label>Text <textarea id="arende-ny-text" required></textarea></label>
+          <button type="submit">Skapa ärende</button>
+          <p class="status" id="arende-skapa-status"></p>
+        </form>
+        <div class="atgarder">
+          <label class="rad">Visa
+            <select id="arenden-status-val">
+              <option value="open">Öppna</option>
+              <option value="closed">Stängda</option>
+              <option value="all">Alla</option>
+            </select>
+          </label>
+          <label class="rad">Sortera
+            <select id="arenden-sort-val">
+              <option value="">Nyast först</option>
+              <option value="updated">Senast aktiv</option>
+            </select>
+          </label>
+          <button type="button" id="arenden-uppdatera">Uppdatera</button>
+          <span class="tid" id="arenden-hamtad"></span>
+        </div>
+        <p class="status" id="arenden-status"></p>
+        <ul id="arenden-lista"></ul>
+        <button type="button" id="arenden-fler" hidden>Visa fler ärenden</button>
+      </div>
+    </section>
+
+    <section id="vy-arende" hidden>
+      <div class="atgarder">
+        <button type="button" id="arende-tillbaka">← Tillbaka</button>
+        <button type="button" id="arende-uppdatera">Uppdatera</button>
+        <span class="tid" id="arende-hamtad"></span>
+      </div>
+      <h2 id="arende-titel"></h2>
+      <p class="meta" id="arende-meta"></p>
+      <p class="pills" id="arende-pills"></p>
+      <p class="status" id="arende-banner" hidden></p>
+      <div id="arende-text" class="markdown"></div>
+      <div id="arende-redigerad"></div>
+      <div class="reaktioner" id="arende-reaktioner"></div>
+      <div class="atgarder pills" id="arende-labels"></div>
+      <div class="atgarder">
+        <a id="arende-github" href="#" target="_blank" rel="noopener noreferrer">Öppna på GitHub</a>
+        <button type="button" id="arende-kopiera">Kopiera länk</button>
+      </div>
+      <p class="status" id="arende-hjalptext"></p>
+      <div class="atgarder" id="arende-atgarder"></div>
+      <form id="arende-redigera-formular" hidden>
+        <label>Titel <input type="text" id="arende-redigera-titel" required></label>
+        <label>Text <textarea id="arende-redigera-text" required></textarea></label>
+        <div class="atgarder">
+          <button type="submit">Spara</button>
+          <button type="button" id="arende-redigera-avbryt">Avbryt</button>
+        </div>
+      </form>
+      <p class="status" id="arende-atgard-status"></p>
+      <h3>Kommentarer</h3>
+      <ul id="arende-kommentarer"></ul>
+      <button type="button" id="arende-kommentarer-fler" hidden>Visa fler kommentarer</button>
+      <form id="arende-kommentar-formular">
+        <label>Ny kommentar <textarea id="arende-kommentar-text" required></textarea></label>
+        <button type="submit">Skicka</button>
+      </form>
+      <p class="status" id="arende-status"></p>
+      <details>
+        <summary>Behörigheter enligt GitHub (för testet)</summary>
+        <pre id="arende-behorigheter"></pre>
+      </details>
+    </section>
+
+    <section id="vy-ord" hidden>
+      <div id="ord-lista-del" hidden>
+        <h2>Ord</h2>
+        <p class="status">Varje ord kan ha många trådar. En tråd hör till ordet genom nyckeln sist i titeln, till exempel <code>(ord:sati)</code>.</p>
+        <form id="ord-ga-formular" class="atgarder">
+          <label>Gå till ord (eller skapa det första) <input type="text" id="ord-ga-text" maxlength="60" required placeholder="till exempel sati"></label>
+          <button type="submit">Öppna</button>
+          <button type="button" id="ord-lista-uppdatera">Uppdatera</button>
+        </form>
+        <section id="ord-vantar" hidden>
+          <h3>Väntar på mig</h3>
+          <div id="ord-vantar-innehall"></div>
+        </section>
+        <p class="status" id="ord-lista-status"></p>
+        <ul id="ord-lista"></ul>
+      </div>
+
+      <div id="ord-ett-del" hidden>
+        <div class="atgarder">
+          <a href="#r/1/w" id="ord-tillbaka">← Alla ord</a>
+          <button type="button" id="ord-uppdatera">Uppdatera</button>
+          <span class="tid" id="ord-hamtad"></span>
+        </div>
+        <h2 id="ord-rubrik"></h2>
+        <p class="meta">Nyckel: <code id="ord-nyckel"></code></p>
+        <p class="status" id="ord-sammanfattning"></p>
+        <div class="atgarder">
+          <button type="button" id="ord-ny-knapp" hidden>Ny diskussion om ordet</button>
+        </div>
+        <form id="ord-ny-formular" hidden>
+          <label>Titel <input type="text" id="ord-ny-titel" maxlength="150" required></label>
+          <label class="kryss"><input type="checkbox" id="ord-forslag-kryss"> Det här är ett förslag (får statusen väntar)</label>
+          <label id="ord-forslag-falt" hidden>Föreslaget svenskt ord <input type="text" id="ord-forslag-text" maxlength="80"></label>
+          <label>Text <textarea id="ord-ny-text" required></textarea></label>
+          <button type="submit">Skapa tråd</button>
+          <p class="status" id="ord-ny-status"></p>
+        </form>
+        <p class="status" id="ord-status"></p>
+        <ul id="ord-tradar" class="ord-tradar"></ul>
+      </div>
+    </section>
+  </main>
+  <script src="arenden.js?v=4"></script>
+  <script src="ord.js?v=2"></script>
+  <script src="extra.js?v=4"></script>
+  <script src="script.js?v=19"></script>
+</body>
+</html>
